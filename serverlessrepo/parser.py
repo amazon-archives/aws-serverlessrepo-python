@@ -1,4 +1,4 @@
-def parse_app_metadata(template):
+def parse_application_metadata(template):
     """
     This function parses the SAM template, checks that it contains "AWS::ServerlessRepo::Application"
     under the "Metadata" section, and that the application metadata format is valid.
@@ -7,6 +7,6 @@ def parse_app_metadata(template):
     :type template: str
     :return: Object containing application metadata
     :rtype: ApplicationMetadata
-    :raises: KeyError, AttributeError, InvalidAppMetadataException
+    :raises: InvalidAppMetadataException
     """
     pass
