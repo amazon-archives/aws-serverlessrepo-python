@@ -1,5 +1,25 @@
-class InvalidAppMetadataException(Exception):
+"""
+Collection of public exceptions raised by this library
+"""
+
+
+class ServerlessRepoError(Exception):
+
+    MESSAGE = ''
+
+    def __init__(self, **kwargs):
+        Exception.__init__(self, self.MESSAGE.format(**kwargs))
+
+
+class InvalidApplicationMetadataError(ServerlessRepoError):
     """
-    Exception for invalid SAM template application metadata
+    Raised when invalid application metadata is provided
     """
-    pass
+    MESSAGE = "Required application metadata properties not provided: '{properties}'"
+
+
+class ApplicationMetadataNotFoundError(ServerlessRepoError):
+    """
+    Raised when application metadata is not found
+    """
+    MESSAGE = "Application metadata not found in the SAM template: '{error_message}'"
