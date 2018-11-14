@@ -1,3 +1,6 @@
+from exceptions import InvalidApplicationMetadataError
+
+
 class ApplicationMetadata(object):
     """
     Class representing SAR metadata
@@ -14,6 +17,7 @@ class ApplicationMetadata(object):
     _HOMEPAGE_URL = 'HomepageUrl'
     _SEMANTIC_VERSION = 'SemanticVersion'
     _SOURCE_CODE_URL = 'SourceCodeUrl'
+    _REQUIRED_PROPERTIES = ['name', 'description', 'author']
 
     def __init__(self, app_metadata):
         """
@@ -33,10 +37,18 @@ class ApplicationMetadata(object):
         self.semantic_version = app_metadata.get(self._SEMANTIC_VERSION)
         self.source_code_url = app_metadata.get(self._SOURCE_CODE_URL)
 
+    def __eq__(self, other):
+        return isinstance(other, type(self)) and self.__dict__ == other.__dict__
+
     def is_valid(self):
         """
-        Checks if the required properties for application metadata have been populated
+        Checks if the required application metadata properties have been populated
 
         :return: True, if the metadata is valid
+        :raises: InvalidApplicationMetadataError
         """
+        missing_properties = [p for p in self._REQUIRED_PROPERTIES if not getattr(self, p)]
+        if len(missing_properties) > 0:
+            missing_properties_str = ', '.join(sorted(missing_properties))
+            raise InvalidApplicationMetadataError(properties=missing_properties_str)
         return True
