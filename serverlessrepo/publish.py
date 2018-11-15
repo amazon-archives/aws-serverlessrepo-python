@@ -8,11 +8,9 @@ def publish_application(template):
     """
     if not template:
         raise ValueError('Require SAM template to publish the app')
-    else:
-        pass
 
 
-def construct_create_application_payload(app_metadata, template):
+def _create_application_request(app_metadata, template):
     return {
         'Author': app_metadata.author,
         'Description': app_metadata.description,
@@ -28,7 +26,7 @@ def construct_create_application_payload(app_metadata, template):
     }
 
 
-def construct_update_application_payload(app_metadata, application_id):
+def _update_application_request(app_metadata, application_id):
     return {
         'ApplicationId': application_id,
         'Author': app_metadata.author,
@@ -39,7 +37,7 @@ def construct_update_application_payload(app_metadata, application_id):
     }
 
 
-def construct_create_application_version_payload(app_metadata, application_id, template):
+def _create_application_version_request(app_metadata, application_id, template):
     return {
         'ApplicationId': application_id,
         'SemanticVersion': app_metadata.semantic_version,

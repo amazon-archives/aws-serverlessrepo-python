@@ -5,12 +5,12 @@ METADATA = 'Metadata'
 SERVERLESS_REPO_APPLICATION = 'AWS::ServerlessRepo::Application'
 
 
-def parse_sam_template(template):
+def parse_template(template_str):
     """
     This function parses the SAM template
 
-    :param template: A packaged YAML or json SAM template
-    :type template: str
+    :param template_str: A packaged YAML or json CloudFormation template
+    :type template_str: str
     :return: Dictionary with keys defined in the template
     :rtype: dict
     """
@@ -26,9 +26,9 @@ def get_app_metadata(template_dict):
     :return: Application metadata as defined in the template
     :rtype: ApplicationMetadata
     """
-    try:
+    if METADATA in template_dict and SERVERLESS_REPO_APPLICATION in template_dict[METADATA]:
         app_metadata_dict = template_dict[METADATA][SERVERLESS_REPO_APPLICATION]
         return ApplicationMetadata(app_metadata_dict)
-    except KeyError as e:
+    else:
         raise ApplicationMetadataNotFoundError(
-            error_message='missing {} section'.format(e.args[0]))
+            error_message='missing {} section in template Metadata'.format(SERVERLESS_REPO_APPLICATION))
