@@ -6,6 +6,7 @@ import json
 import six
 import yaml
 from yaml.resolver import ScalarNode, SequenceNode
+from collections import OrderedDict
 
 from .application_metadata import ApplicationMetadata
 from .exceptions import ApplicationMetadataNotFoundError
@@ -51,6 +52,10 @@ def intrinsics_multi_constructor(loader, tag_prefix, node):
     return {cfntag: value}
 
 
+def _dict_representer(dumper, data):
+    return dumper.represent_dict(data.items())
+
+
 def yaml_dump(dict_to_dump):
     """
     This function dumps the dictionary as a YAML document
@@ -59,7 +64,12 @@ def yaml_dump(dict_to_dump):
     :return: YAML document
     :rtype: str
     """
+    yaml.SafeDumper.add_representer(OrderedDict, _dict_representer)
     return yaml.safe_dump(dict_to_dump, default_flow_style=False)
+
+
+def _dict_constructor(loader, node):
+    return OrderedDict(loader.construct_pairs(node))
 
 
 def parse_template(template_str):
@@ -75,10 +85,11 @@ def parse_template(template_str):
         # PyYAML doesn't support json as well as it should, so if the input
         # is actually just json it is better to parse it with the standard
         # json parser.
-        return json.loads(template)
+        return json.loads(template_str)
     except ValueError:
+        yaml.SafeLoader.add_constructor(yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG, _dict_constructor)
         yaml.SafeLoader.add_multi_constructor('!', intrinsics_multi_constructor)
-        return yaml.safe_load(template)
+        return yaml.safe_load(template_str)
 
 
 def get_app_metadata(template_dict):
@@ -89,6 +100,7 @@ def get_app_metadata(template_dict):
     :type template_dict: dict
     :return: Application metadata as defined in the template
     :rtype: ApplicationMetadata
+    :raises ApplicationMetadataNotFoundError
     """
     if METADATA in template_dict and SERVERLESS_REPO_APPLICATION in template_dict[METADATA]:
         app_metadata_dict = template_dict[METADATA][SERVERLESS_REPO_APPLICATION]

@@ -2,7 +2,7 @@ from unittest import TestCase
 
 from serverlessrepo.exceptions import ApplicationMetadataNotFoundError
 from serverlessrepo.application_metadata import ApplicationMetadata
-from serverlessrepo.parser import parse_sam_template, yaml_dump, get_app_metadata
+from serverlessrepo.parser import parse_template, yaml_dump, get_app_metadata
 
 
 class TestParser(TestCase):
@@ -46,12 +46,12 @@ class TestParser(TestCase):
     }
 
     def test_parse_yaml_with_tags(self):
-        output = parse_sam_template(self.yaml_with_tags)
+        output = parse_template(self.yaml_with_tags)
         self.assertEquals(self.parsed_yaml_dict, output)
 
         # Make sure formatter and parser work well with each other
         formatted_str = yaml_dump(output)
-        output_again = parse_sam_template(formatted_str)
+        output_again = parse_template(formatted_str)
         self.assertEquals(output, output_again)
 
     def test_yaml_getatt(self):
@@ -70,13 +70,43 @@ class TestParser(TestCase):
             }
         }
 
-        actual_output = parse_sam_template(input)
+        actual_output = parse_template(input)
         self.assertEquals(actual_output, output)
 
     def test_parse_json_with_tabs(self):
         template = '{\n\t"foo": "bar"\n}'
-        output = parse_sam_template(template)
+        output = parse_template(template)
         self.assertEqual(output, {'foo': 'bar'})
+
+    def test_parse_yaml_preserve_elements_order(self):
+        input_template = """
+        B_Resource:
+            Key2:
+                Name: name2
+            Key1:
+                Name: name1
+        A_Resource:
+            Key2:
+                Name: name2
+            Key1:
+                Name: name1
+        """
+        output_dict = parse_template(input_template)
+        expected_dict = {
+            'B_Resource': {
+                'Key2': {'Name': 'name2'},
+                'Key1': {'Name': 'name1'}
+            },
+            'A_Resource': {
+                'Key2': {'Name': 'name2'},
+                'Key1': {'Name': 'name1'}
+            }
+        }
+        self.assertEqual(expected_dict, output_dict)
+        output_template = yaml_dump(output_dict)
+        # yaml dump changes indentation, remove spaces and new line characters to just compare the text
+        self.assertEqual(input_template.translate(None, '\n '),
+                         output_template.translate(None, '\n '))
 
     def test_get_app_metadata_missing_metadata(self):
         template_dict_without_metadata = {
@@ -88,7 +118,7 @@ class TestParser(TestCase):
             get_app_metadata(template_dict_without_metadata)
 
         message = str(context.exception)
-        expected = 'missing Metadata section'
+        expected = 'missing AWS::ServerlessRepo::Application section in template Metadata'
         self.assertTrue(expected in message)
 
     def test_get_app_metadata_missing_app_metadata(self):
@@ -101,7 +131,7 @@ class TestParser(TestCase):
             get_app_metadata(template_dict_without_app_metadata)
 
         message = str(context.exception)
-        expected = 'missing AWS::ServerlessRepo::Application section'
+        expected = 'missing AWS::ServerlessRepo::Application section in template Metadata'
         self.assertTrue(expected in message)
 
     def test_get_app_metadata_return_metadata(self):
