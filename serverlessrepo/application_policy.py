@@ -56,7 +56,7 @@ class ApplicationPolicy(object):
 
         if any(not self._PRINCIPAL_PATTERN.match(p) for p in self.principals):
             raise InvalidApplicationPolicyError(
-                error_message='principal should be 12-digit number or "*"')
+                error_message='principal should be 12-digit accountId or "*"')
 
         unsupported_actions = sorted(set(self.actions) - set(self.SUPPORTED_ACTIONS))
         if len(unsupported_actions):
