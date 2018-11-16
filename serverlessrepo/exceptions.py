@@ -23,3 +23,10 @@ class ApplicationMetadataNotFoundError(ServerlessRepoError):
     Raised when application metadata is not found
     """
     MESSAGE = "Application metadata not found in the SAM template: '{error_message}'"
+
+
+class InvalidApplicationPolicyError(ServerlessRepoError):
+    """
+    Raised when invalid application policy is provided
+    """
+    MESSAGE = "Invalid application policy: '{error_message}'"
