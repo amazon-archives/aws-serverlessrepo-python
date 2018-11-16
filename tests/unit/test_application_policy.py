@@ -32,7 +32,7 @@ class TestApplicationPolicy(TestCase):
             app_policy.validate()
 
         message = str(context.exception)
-        expected = 'principal should be 12-digit number or "*"'
+        expected = 'principal should be 12-digit AWS account ID or "*"'
         self.assertTrue(expected in message)
 
     def test_empty_actions(self):
