@@ -1,3 +1,6 @@
+from .exceptions import InvalidApplicationMetadataError
+
+
 class ApplicationMetadata(object):
     """
     Class representing SAR metadata
@@ -36,10 +39,17 @@ class ApplicationMetadata(object):
     def __eq__(self, other):
         return isinstance(other, type(self)) and self.__dict__ == other.__dict__
 
-    def is_valid(self):
+    def validate(self, required_props):
         """
-        Checks if the required properties for application metadata have been populated
+        Checks if the required application metadata properties have been populated
 
+        :param required_props: List of required properties
+        :type required_props: list
         :return: True, if the metadata is valid
+        :raises: InvalidApplicationMetadataError
         """
+        missing_props = [p for p in required_props if not getattr(self, p)]
+        if missing_props:
+            missing_props_str = ', '.join(sorted(missing_props))
+            raise InvalidApplicationMetadataError(properties=missing_props_str)
         return True
