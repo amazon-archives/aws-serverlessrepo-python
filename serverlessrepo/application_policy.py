@@ -10,6 +10,7 @@ class ApplicationPolicy(object):
 
     # Supported actions for setting SAR application permissions
     GET_APPLICATION = 'GetApplication'
+    LIST_APPLICATION_DEPENDENCIES = 'ListApplicationDependencies'
     CREATE_CLOUD_FORMATION_CHANGE_SET = 'CreateCloudFormationChangeSet'
     CREATE_CLOUD_FORMATION_TEMPLATE = 'CreateCloudFormationTemplate'
     LIST_APPLICATION_VERSIONS = 'ListApplicationVersions'
@@ -18,6 +19,7 @@ class ApplicationPolicy(object):
 
     SUPPORTED_ACTIONS = [
         GET_APPLICATION,
+        LIST_APPLICATION_DEPENDENCIES,
         CREATE_CLOUD_FORMATION_CHANGE_SET,
         CREATE_CLOUD_FORMATION_TEMPLATE,
         LIST_APPLICATION_VERSIONS,
@@ -25,17 +27,19 @@ class ApplicationPolicy(object):
         DEPLOY
     ]
 
+    _PRINCIPAL_PATTERN = re.compile(r'^([0-9]{12}|\*)$')
+
     def __init__(self, principals, actions):
         """
         Initializes the object given the principals and actions
 
-        :param principals: Comma-separated list of AWS account IDs, or *
-        :type principals: str
-        :param actions: Comma-separated list of actions supported by SAR
-        :type actions: str
+        :param principals: List of AWS account IDs, or *
+        :type principals: list of str
+        :param actions: List of actions supported by SAR
+        :type actions: list of str
         """
-        self.principals = principals.replace(' ', '')
-        self.actions = actions.replace(' ', '')
+        self.principals = principals
+        self.actions = actions
 
     def validate(self):
         """
@@ -50,18 +54,12 @@ class ApplicationPolicy(object):
         if not self.actions:
             raise InvalidApplicationPolicyError(error_message='actions not provided')
 
-        principals_pattern = re.compile('^[0-9]{12}(,[0-9]{12})*$')
-        if not principals_pattern.match(self.principals):
+        if any(not self._PRINCIPAL_PATTERN.match(p) for p in self.principals):
             raise InvalidApplicationPolicyError(
-                error_message='principals should be comma separated 12-digit numbers')
+                error_message='principal should be 12-digit number or "*"')
 
-        actions_pattern = re.compile('^[a-zA-Z]+(,[a-zA-Z]+)*$')
-        if not actions_pattern.match(self.actions):
-            raise InvalidApplicationPolicyError(
-                error_message='actions should be comma separated')
-
-        unsupported_actions = sorted(set(self.actions.split(',')) - set(self.SUPPORTED_ACTIONS))
-        if len(unsupported_actions) > 0:
+        unsupported_actions = sorted(set(self.actions) - set(self.SUPPORTED_ACTIONS))
+        if len(unsupported_actions):
             raise InvalidApplicationPolicyError(
                 error_message='{} not supported'.format(', '.join(unsupported_actions)))
 
@@ -75,6 +73,6 @@ class ApplicationPolicy(object):
         :rtype: dict
         """
         return {
-            'Principals': self.principals.split(','),
-            'Actions': self.actions.split(',')
+            'Principals': self.principals,
+            'Actions': self.actions
         }
