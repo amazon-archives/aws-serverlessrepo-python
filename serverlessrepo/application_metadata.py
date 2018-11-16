@@ -49,7 +49,7 @@ class ApplicationMetadata(object):
         :raises: InvalidApplicationMetadataError
         """
         missing_props = [p for p in required_props if not getattr(self, p)]
-        if len(missing_props) > 0:
+        if missing_props:
             missing_props_str = ', '.join(sorted(missing_props))
             raise InvalidApplicationMetadataError(properties=missing_props_str)
         return True
