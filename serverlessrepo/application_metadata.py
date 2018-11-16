@@ -33,6 +33,9 @@ class ApplicationMetadata(object):
         self.semantic_version = app_metadata.get(self._SEMANTIC_VERSION)
         self.source_code_url = app_metadata.get(self._SOURCE_CODE_URL)
 
+    def __eq__(self, other):
+        return isinstance(other, type(self)) and self.__dict__ == other.__dict__
+
     def is_valid(self):
         """
         Checks if the required properties for application metadata have been populated
