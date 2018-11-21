@@ -6,7 +6,6 @@ from .application_policy import ApplicationPolicy
 def make_application_public(application_id):
     """
     This function sets the application to be public
-    :return: True, if the request succeeded
     :raises ValueError
     """
     if not application_id:
@@ -18,13 +17,11 @@ def make_application_public(application_id):
         ApplicationId=application_id,
         Statements=[application_policy.to_statement()]
     )
-    return True
 
 
 def make_application_private(application_id):
     """
     This function sets the application to be private
-    :return: True, if the request succeeded
     :raises ValueError
     """
     if not application_id:
@@ -34,7 +31,6 @@ def make_application_private(application_id):
         ApplicationId=application_id,
         Statements=[]
     )
-    return True
 
 
 def share_application_with_accounts(application_id, account_ids):
@@ -42,7 +38,6 @@ def share_application_with_accounts(application_id, account_ids):
     This function shares the application privately with given AWS account IDs
     :param account_ids: List of AWS account IDs, or *
     :type account_ids: list of str
-    :return: True, if the request succeeded
     :raises ValueError
     """
     if not application_id or not account_ids:
@@ -54,4 +49,3 @@ def share_application_with_accounts(application_id, account_ids):
         ApplicationId=application_id,
         Statements=[application_policy.to_statement()]
     )
-    return True

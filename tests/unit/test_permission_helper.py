@@ -17,8 +17,7 @@ class TestPermissionHelper(TestCase):
         self.account_ids = ['123456789012']
 
     def test_make_application_public_succeeded(self):
-        result = permission_helper.make_application_public(self.application_id)
-        self.assertTrue(result)
+        permission_helper.make_application_public(self.application_id)
         self.serverlessrepo_mock.put_application_policy.assert_called_with(
             ApplicationId=self.application_id,
             Statements=[{
@@ -36,8 +35,7 @@ class TestPermissionHelper(TestCase):
         self.assertEqual(expected, message)
 
     def test_make_application_private_succeeded(self):
-        result = permission_helper.make_application_private(self.application_id)
-        self.assertTrue(result)
+        permission_helper.make_application_private(self.application_id)
         self.serverlessrepo_mock.put_application_policy.assert_called_with(
             ApplicationId=self.application_id,
             Statements=[]
@@ -52,8 +50,7 @@ class TestPermissionHelper(TestCase):
         self.assertEqual(expected, message)
 
     def test_share_application_with_accounts_succeeded(self):
-        result = permission_helper.share_application_with_accounts(self.application_id, self.account_ids)
-        self.assertTrue(result)
+        permission_helper.share_application_with_accounts(self.application_id, self.account_ids)
         self.serverlessrepo_mock.put_application_policy.assert_called_with(
             ApplicationId=self.application_id,
             Statements=[{
