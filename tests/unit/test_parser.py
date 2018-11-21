@@ -151,8 +151,20 @@ class TestParser(TestCase):
         actual = parser.get_app_metadata(template_dict)
         self.assertEqual(expected, actual)
 
-    def test_parse_application_id_return_application_id(self):
+    def test_parse_application_id_aws_partition(self):
         application_id = 'arn:aws:serverlessrepo:us-east-1:123456789012:applications/test-app'
+        text_with_application_id = 'Application with id {} already exists.'.format(application_id)
+        result = parser.parse_application_id(text_with_application_id)
+        self.assertEquals(result, application_id)
+
+    def test_parse_application_id_aws_cn_partition(self):
+        application_id = 'arn:aws-cn:serverlessrepo:cn-northwest-1:123456789012:applications/test-app'
+        text_with_application_id = 'Application with id {} already exists.'.format(application_id)
+        result = parser.parse_application_id(text_with_application_id)
+        self.assertEquals(result, application_id)
+
+    def test_parse_application_id_aws_us_gov_partition(self):
+        application_id = 'arn:aws-us-gov:serverlessrepo:us-gov-east-1:123456789012:applications/test-app'
         text_with_application_id = 'Application with id {} already exists.'.format(application_id)
         result = parser.parse_application_id(text_with_application_id)
         self.assertEquals(result, application_id)

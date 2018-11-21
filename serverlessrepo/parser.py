@@ -14,7 +14,7 @@ from .exceptions import ApplicationMetadataNotFoundError
 
 METADATA = 'Metadata'
 SERVERLESS_REPO_APPLICATION = 'AWS::ServerlessRepo::Application'
-APPLICATION_ID_PATTERN = r'arn:aws:serverlessrepo:[a-z]{2}-[a-z]+-[1-9]:[0-9]{12}:applications\/[^\s]+'
+APPLICATION_ID_PATTERN = r'arn:aws(-cn|-us-gov)?:serverlessrepo:[a-z]{2}(-gov)?-[a-z]+-[1-9]:[0-9]{12}:applications\/[^\s]+'
 
 
 def intrinsics_multi_constructor(loader, tag_prefix, node):

@@ -26,25 +26,23 @@ def publish_application(template):
         response = serverlessrepo.create_application(**request)
         application_id = response['ApplicationId']
     except ClientError as e:
-        error_code = e.response['Error']['Code']
-        if error_code == 'ConflictException':
-            # Update the application if it already exists
-            error_message = e.response['Error']['Message']
-            application_id = parse_application_id(error_message)
-            request = _update_application_request(app_metadata, application_id)
-            serverlessrepo.update_application(**request)
+        if not _is_conflict_exception(e):
+            raise
 
-            # Create application version if semantic version specified in the template
-            if app_metadata.semantic_version:
-                try:
-                    request = _create_application_version_request(app_metadata, application_id, template)
-                    serverlessrepo.create_application_version(**request)
-                except ClientError as e:
-                    error_code = e.response['Error']['Code']
-                    if error_code != 'ConflictException':
-                        raise e
-        else:
-            raise e
+        # Update the application if it already exists
+        error_message = e.response['Error']['Message']
+        application_id = parse_application_id(error_message)
+        request = _update_application_request(app_metadata, application_id)
+        serverlessrepo.update_application(**request)
+
+        # Create application version if semantic version specified in the template
+        if app_metadata.semantic_version:
+            try:
+                request = _create_application_version_request(app_metadata, application_id, template)
+                serverlessrepo.create_application_version(**request)
+            except ClientError as e:
+                if not _is_conflict_exception(e):
+                    raise
 
     result = {'application_id': application_id}
     if app_metadata.semantic_version:
@@ -78,7 +76,7 @@ def _create_application_request(app_metadata, template):
         'TemplateBody': template
     }
     # Remove None values
-    return dict((k, v) for k, v in request.items() if v)
+    return {k:v for k, v in request.items() if v}
 
 
 def _update_application_request(app_metadata, application_id):
@@ -100,7 +98,7 @@ def _update_application_request(app_metadata, application_id):
         'Labels': app_metadata.labels,
         'ReadmeUrl': app_metadata.readme_url
     }
-    return dict((k, v) for k, v in request.items() if v)
+    return {k:v for k, v in request.items() if v}
 
 
 def _create_application_version_request(app_metadata, application_id, template):
@@ -123,4 +121,16 @@ def _create_application_version_request(app_metadata, application_id, template):
         'SourceCodeUrl': app_metadata.source_code_url,
         'TemplateBody': template
     }
-    return dict((k, v) for k, v in request.items() if v)
+    return {k:v for k, v in request.items() if v}
+
+
+def _is_conflict_exception(e):
+    """
+    This function checks whether the boto3 ClientError is ConflictException
+
+    :param e: boto3 exception
+    :type e: ClientError
+    :return: True if e is ConflictException
+    """
+    error_code = e.response['Error']['Code']
+    return error_code == 'ConflictException'
