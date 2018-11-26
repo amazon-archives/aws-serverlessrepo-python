@@ -1,0 +1,15 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[dev-packages]
+pytest = "*"
+pytest-cov = "*"
+pylint = "*"
+mock = "*"
+"flake8" = "*"
+"flake8-docstrings" = "*"
+
+[packages]
+serverlessrepo = {path = ".",extras = ["dev"],editable = true}
