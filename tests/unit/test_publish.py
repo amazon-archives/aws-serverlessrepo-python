@@ -2,7 +2,7 @@ from unittest import TestCase
 from mock import Mock, patch
 from botocore.exceptions import ClientError
 
-from serverlessrepo import publish_application
+from serverlessrepo import publish_application, publish_application_metadata
 from serverlessrepo.exceptions import InvalidApplicationMetadataError
 
 
@@ -41,7 +41,7 @@ class TestPublishApplication(TestCase):
             publish_application('')
 
         message = str(context.exception)
-        expected = 'Require SAM template to publish the app'
+        expected = 'Require SAM template to publish the application'
         self.assertEqual(expected, message)
         self.serverlessrepo_mock.create_application.assert_not_called()
 
@@ -113,7 +113,7 @@ class TestPublishApplication(TestCase):
         }
         self.serverlessrepo_mock.update_application.assert_called_once_with(**expected_request)
 
-    def test_publish_existing_application_should_create_application_version_if_specified(self):
+    def test_publish_existing_application_should_create_application_version(self):
         self.serverlessrepo_mock.create_application.side_effect = self.application_exists_error
 
         actual_result = publish_application(self.template)
@@ -125,7 +125,7 @@ class TestPublishApplication(TestCase):
 
         self.serverlessrepo_mock.create_application.assert_called_once()
         self.serverlessrepo_mock.update_application.assert_called_once()
-        # should continue to create application version if semantic version is specified in the template
+        # should continue to create application version
         expected_request = {
             'ApplicationId': self.application_id,
             'SemanticVersion': '1.0.0',
@@ -133,7 +133,7 @@ class TestPublishApplication(TestCase):
         }
         self.serverlessrepo_mock.create_application_version.assert_called_once_with(**expected_request)
 
-    def test_publish_existing_application_should_not_create_application_version_if_not_specified(self):
+    def test_publish_existing_application_should_throw_exception_if_version_not_specified(self):
         self.serverlessrepo_mock.create_application.side_effect = self.application_exists_error
         template_without_semantic_version = """
         {
@@ -146,44 +146,68 @@ class TestPublishApplication(TestCase):
             }
         }
         """
+        with self.assertRaises(InvalidApplicationMetadataError) as context:
+            publish_application(template_without_semantic_version)
 
-        actual_result = publish_application(template_without_semantic_version)
-        expected_result = {'application_id': self.application_id}
-        self.assertEqual(expected_result, actual_result)
+        message = str(context.exception)
+        self.assertEqual("Required application metadata properties not provided: 'semantic_version'", message)
 
         self.serverlessrepo_mock.create_application.assert_called_once()
         self.serverlessrepo_mock.update_application.assert_called_once()
+        # create_application_version shouldn't be called if version is not provided
         self.serverlessrepo_mock.create_application_version.assert_not_called()
 
-    def test_publish_existing_application_version_should_not_raise_exception(self):
-        self.serverlessrepo_mock.create_application.side_effect = self.application_exists_error
-        self.serverlessrepo_mock.create_application_version.side_effect = ClientError(
-            {
-                'Error': {
-                    'Code': 'ConflictException',
-                    'Message': 'Cannot publish version 1.0.0 for application {} '
-                               'because it already exists'.format(self.application_id)
+    def tearDown(self):
+        self.patcher.stop()
+
+
+class TestPublishApplicationMetadata(TestCase):
+    def setUp(self):
+        self.patcher = patch('serverlessrepo.publish.boto3')
+        self.boto3_mock = self.patcher.start()
+        self.serverlessrepo_mock = Mock()
+        self.boto3_mock.client.return_value = self.serverlessrepo_mock
+        self.template = """
+        {
+            "Metadata": {
+                'AWS::ServerlessRepo::Application': {
+                    'Name': 'test-app',
+                    'Description': 'hello world',
+                    'Author': 'abc',
+                    'SemanticVersion': '1.0.0'
                 }
-            },
-            'create_application_version'
-        )
-
-        actual_result = publish_application(self.template)
-        expected_result = {
-            'application_id': self.application_id,
-            'semantic_version': '1.0.0'
+            }
         }
-        self.assertEqual(expected_result, actual_result)
+        """
+        self.application_id = 'arn:aws:serverlessrepo:us-east-1:123456789012:applications/test-app'
 
-    def test_publish_exception_when_serverlessrepo_create_application_version(self):
-        self.serverlessrepo_mock.create_application.side_effect = self.application_exists_error
-        self.serverlessrepo_mock.create_application_version.side_effect = ClientError(
-            {'Error': {'Code': 'BadRequestException'}},
-            'create_application_version'
-        )
+    def test_empty_template_throw_exception(self):
+        with self.assertRaises(ValueError) as context:
+            publish_application_metadata('', self.application_id)
 
-        with self.assertRaises(ClientError):
-            publish_application(self.template)
+        message = str(context.exception)
+        expected = 'Require SAM template and application ID to update application metadata'
+        self.assertEqual(expected, message)
+        self.serverlessrepo_mock.update_application.assert_not_called()
+
+    def test_empty_application_id_throw_exception(self):
+        with self.assertRaises(ValueError) as context:
+            publish_application_metadata(self.template, '')
+
+        message = str(context.exception)
+        expected = 'Require SAM template and application ID to update application metadata'
+        self.assertEqual(expected, message)
+        self.serverlessrepo_mock.update_application.assert_not_called()
+
+    def test_publish_application_metadata_ignore_irrelevant_fields(self):
+        publish_application_metadata(self.template, self.application_id)
+        # SemanticVersion in the template should be ignored
+        expected_request = {
+            'ApplicationId': self.application_id,
+            'Author': 'abc',
+            'Description': 'hello world'
+        }
+        self.serverlessrepo_mock.update_application.assert_called_once_with(**expected_request)
 
     def tearDown(self):
         self.patcher.stop()

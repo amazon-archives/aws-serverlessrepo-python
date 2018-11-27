@@ -15,7 +15,7 @@ def publish_application(template):
     :raises ValueError
     """
     if not template:
-        raise ValueError('Require SAM template to publish the app')
+        raise ValueError('Require SAM template to publish the application')
 
     template_dict = parse_template(template)
     app_metadata = get_app_metadata(template_dict)
@@ -35,19 +35,33 @@ def publish_application(template):
         request = _update_application_request(app_metadata, application_id)
         serverlessrepo.update_application(**request)
 
-        # Create application version if semantic version specified in the template
-        if app_metadata.semantic_version:
-            try:
-                request = _create_application_version_request(app_metadata, application_id, template)
-                serverlessrepo.create_application_version(**request)
-            except ClientError as e:
-                if not _is_conflict_exception(e):
-                    raise
+        # Create an application version
+        request = _create_application_version_request(app_metadata, application_id, template)
+        serverlessrepo.create_application_version(**request)
 
-    result = {'application_id': application_id}
-    if app_metadata.semantic_version:
-        result['semantic_version'] = app_metadata.semantic_version
-    return result
+    return {
+        'application_id': application_id,
+        'semantic_version': app_metadata.semantic_version
+    }
+
+
+def publish_application_metadata(template, application_id):
+    """
+    This function updates the application metadata
+
+    :param template: A packaged YAML or JSON SAM template
+    :type template: str
+    :param application_id: The Amazon Resource Name (ARN) of the application
+    :type application_id: str
+    :raises ValueError
+    """
+    if not template or not application_id:
+        raise ValueError('Require SAM template and application ID to update application metadata')
+
+    template_dict = parse_template(template)
+    app_metadata = get_app_metadata(template_dict)
+    request = _update_application_request(app_metadata, application_id)
+    boto3.client('serverlessrepo').update_application(**request)
 
 
 def _create_application_request(app_metadata, template):
