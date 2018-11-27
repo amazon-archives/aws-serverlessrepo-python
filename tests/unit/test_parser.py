@@ -58,12 +58,12 @@ class TestParser(TestCase):
     def test_yaml_getatt(self):
         # This is an invalid syntax for !GetAtt. But make sure the code does not crash when we encouter this syntax
         # Let CloudFormation interpret this value at runtime
-        input = """
+        input_str = """
         Resource:
             Key: !GetAtt ["a", "b"]
         """
 
-        output = {
+        output_dir = {
             "Resource": {
                 "Key": {
                     "Fn::GetAtt": ["a", "b"]
@@ -71,8 +71,8 @@ class TestParser(TestCase):
             }
         }
 
-        actual_output = parser.parse_template(input)
-        self.assertEqual(actual_output, output)
+        actual_output = parser.parse_template(input_str)
+        self.assertEqual(actual_output, output_dir)
 
     def test_parse_json_with_tabs(self):
         template = '{\n\t"foo": "bar"\n}'

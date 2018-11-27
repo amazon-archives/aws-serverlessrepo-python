@@ -6,7 +6,7 @@ A Python library with convenience helpers for working with the [AWS Serverless A
 
 Simply use pip to install the library:
 
-```
+```text
 pip install serverlessrepo
 ```
 
@@ -24,7 +24,7 @@ import serverlessrepo
 
 Given an [AWS Serverless Application Model (SAM)](https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md) template, it publishes a new application using the specified metadata in AWS Serverless Application Repository. If the application already exists, it publishes a new application version.
 
-#### publish_application_metadata(template, application_id)
+#### update_application_metadata(template, application_id)
 
 Parses the application metadata from the SAM template and updates the application.
 
@@ -43,12 +43,12 @@ with open('template.yaml', 'r') as f:
 Or updates the application's metadata using template.yaml:
 
 ```python
-from serverlessrepo import publish_application_metadata
+from serverlessrepo import update_application_metadata
 
 with open('template.yaml', 'r') as f:
     template = f.read()
     application_id = 'arn:aws:serverlessrepo:us-east-1:123456789012:applications/test-app'
-    publish_application_metadata(template, application_id)
+    update_application_metadata(template, application_id)
 ```
 
 ### Manage Application Permissions

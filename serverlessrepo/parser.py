@@ -1,13 +1,11 @@
-"""
-Helper to parse JSON/YAML SAM template and dump YAML files
-"""
+"""Helper to parse JSON/YAML SAM template and dump YAML files."""
 
 import re
 import json
+from collections import OrderedDict
 import six
 import yaml
 from yaml.resolver import ScalarNode, SequenceNode
-from collections import OrderedDict
 
 from .application_metadata import ApplicationMetadata
 from .exceptions import ApplicationMetadataNotFoundError
@@ -20,9 +18,9 @@ APPLICATION_ID_PATTERN = r'arn:[\w\-]+:serverlessrepo:[\w\-]+:[0-9]+:application
 def intrinsics_multi_constructor(loader, tag_prefix, node):
     """
     YAML constructor to parse CloudFormation intrinsics.
-    This will return a dictionary with key being the instrinsic name
-    """
 
+    :return: a dictionary with key being the instrinsic name
+    """
     # Get the actual tag name excluding the first exclamation
     tag = node.tag[1:]
 
@@ -60,7 +58,8 @@ def _dict_representer(dumper, data):
 
 def yaml_dump(dict_to_dump):
     """
-    This function dumps the dictionary as a YAML document
+    Dump the dictionary as a YAML document.
+
     :param dict_to_dump: Data to be serialized as YAML
     :type dict_to_dump: dict
     :return: YAML document
@@ -76,7 +75,7 @@ def _dict_constructor(loader, node):
 
 def parse_template(template_str):
     """
-    This function parses the SAM template
+    Parse the SAM template.
 
     :param template_str: A packaged YAML or json CloudFormation template
     :type template_str: str
@@ -96,7 +95,7 @@ def parse_template(template_str):
 
 def get_app_metadata(template_dict):
     """
-    This function gets the application metadata from a SAM template
+    Get the application metadata from a SAM template.
 
     :param template_dict: SAM template as a dictionary
     :type template_dict: dict
@@ -107,11 +106,19 @@ def get_app_metadata(template_dict):
     if METADATA in template_dict and SERVERLESS_REPO_APPLICATION in template_dict[METADATA]:
         app_metadata_dict = template_dict[METADATA][SERVERLESS_REPO_APPLICATION]
         return ApplicationMetadata(app_metadata_dict)
-    else:
-        raise ApplicationMetadataNotFoundError(
-            error_message='missing {} section in template Metadata'.format(SERVERLESS_REPO_APPLICATION))
+
+    raise ApplicationMetadataNotFoundError(
+        error_message='missing {} section in template Metadata'.format(SERVERLESS_REPO_APPLICATION))
 
 
 def parse_application_id(text):
+    """
+    Extract the application id from input text.
+
+    :param text: text to parse
+    :type text: str
+    :return: application id if found in the input
+    :rtype: str
+    """
     result = re.search(APPLICATION_ID_PATTERN, text)
     return result.group(0) if result else None

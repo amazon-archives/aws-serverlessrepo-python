@@ -2,7 +2,7 @@ from unittest import TestCase
 from mock import patch
 from botocore.exceptions import ClientError
 
-from serverlessrepo import publish_application, publish_application_metadata
+from serverlessrepo import publish_application, update_application_metadata
 from serverlessrepo.exceptions import InvalidApplicationMetadataError
 
 
@@ -178,7 +178,7 @@ class TestPublishApplicationMetadata(TestCase):
 
     def test_empty_template_throw_exception(self):
         with self.assertRaises(ValueError) as context:
-            publish_application_metadata('', self.application_id)
+            update_application_metadata('', self.application_id)
 
         message = str(context.exception)
         expected = 'Require SAM template and application ID to update application metadata'
@@ -187,7 +187,7 @@ class TestPublishApplicationMetadata(TestCase):
 
     def test_empty_application_id_throw_exception(self):
         with self.assertRaises(ValueError) as context:
-            publish_application_metadata(self.template, '')
+            update_application_metadata(self.template, '')
 
         message = str(context.exception)
         expected = 'Require SAM template and application ID to update application metadata'
@@ -195,7 +195,7 @@ class TestPublishApplicationMetadata(TestCase):
         self.serverlessrepo_mock.update_application.assert_not_called()
 
     def test_publish_application_metadata_ignore_irrelevant_fields(self):
-        publish_application_metadata(self.template, self.application_id)
+        update_application_metadata(self.template, self.application_id)
         # SemanticVersion in the template should be ignored
         expected_request = {
             'ApplicationId': self.application_id,
