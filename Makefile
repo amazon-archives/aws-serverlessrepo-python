@@ -1,6 +1,6 @@
 init:
 	pip install pipenv --upgrade
-	pipenv sync --dev
+	pipenv install --dev --skip-lock
 
 test:
 	# Run unit tests, fail if coverage falls below 95%

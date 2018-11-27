@@ -10,6 +10,7 @@ pylint = "*"
 mock = "*"
 "flake8" = "*"
 "flake8-docstrings" = "*"
+tox = "*"
 
 [packages]
 serverlessrepo = {path = ".",extras = ["dev"],editable = true}
