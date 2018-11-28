@@ -11,4 +11,4 @@ __description__ = (
 )
 __url__ = 'https://github.com/awslabs/aws-serverlessrepo-python'
 __author__ = 'Amazon Web Services'
-__author_email__ = 'serverless-apps-dev@amazon.com'
+__author_email__ = '<TBD>'

@@ -3,8 +3,8 @@ init:
 	pipenv install --dev --skip-lock
 
 test:
-	# Run unit tests, fail if coverage falls below 95%
-	pipenv run pytest --cov serverlessrepo --cov-report term-missing --cov-fail-under 95 tests/unit
+	# Run unit tests, fail if coverage falls below 85%
+	pipenv run pytest --cov serverlessrepo --cov-report term-missing --cov-fail-under 85 tests/unit
 
 flake:
 	# Make sure code conforms to PEP8 standards
