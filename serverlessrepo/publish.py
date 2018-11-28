@@ -3,6 +3,8 @@ from botocore.exceptions import ClientError
 
 from .parser import parse_template, get_app_metadata, parse_application_id
 
+_serverlessrepo = boto3.client('serverlessrepo')
+
 
 def publish_application(template):
     """
@@ -19,11 +21,10 @@ def publish_application(template):
 
     template_dict = parse_template(template)
     app_metadata = get_app_metadata(template_dict)
-    serverlessrepo = boto3.client('serverlessrepo')
 
     try:
         request = _create_application_request(app_metadata, template)
-        response = serverlessrepo.create_application(**request)
+        response = _serverlessrepo.create_application(**request)
         application_id = response['ApplicationId']
     except ClientError as e:
         if not _is_conflict_exception(e):
@@ -33,11 +34,11 @@ def publish_application(template):
         error_message = e.response['Error']['Message']
         application_id = parse_application_id(error_message)
         request = _update_application_request(app_metadata, application_id)
-        serverlessrepo.update_application(**request)
+        _serverlessrepo.update_application(**request)
 
         # Create an application version
         request = _create_application_version_request(app_metadata, application_id, template)
-        serverlessrepo.create_application_version(**request)
+        _serverlessrepo.create_application_version(**request)
 
     return {
         'application_id': application_id,
@@ -61,7 +62,7 @@ def publish_application_metadata(template, application_id):
     template_dict = parse_template(template)
     app_metadata = get_app_metadata(template_dict)
     request = _update_application_request(app_metadata, application_id)
-    boto3.client('serverlessrepo').update_application(**request)
+    _serverlessrepo.update_application(**request)
 
 
 def _create_application_request(app_metadata, template):
@@ -90,7 +91,7 @@ def _create_application_request(app_metadata, template):
         'TemplateBody': template
     }
     # Remove None values
-    return {k:v for k, v in request.items() if v}
+    return {k: v for k, v in request.items() if v}
 
 
 def _update_application_request(app_metadata, application_id):
@@ -112,7 +113,7 @@ def _update_application_request(app_metadata, application_id):
         'Labels': app_metadata.labels,
         'ReadmeUrl': app_metadata.readme_url
     }
-    return {k:v for k, v in request.items() if v}
+    return {k: v for k, v in request.items() if v}
 
 
 def _create_application_version_request(app_metadata, application_id, template):
@@ -135,7 +136,7 @@ def _create_application_version_request(app_metadata, application_id, template):
         'SourceCodeUrl': app_metadata.source_code_url,
         'TemplateBody': template
     }
-    return {k:v for k, v in request.items() if v}
+    return {k: v for k, v in request.items() if v}
 
 
 def _is_conflict_exception(e):
