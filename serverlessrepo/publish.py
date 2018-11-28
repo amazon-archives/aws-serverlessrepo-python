@@ -3,7 +3,7 @@ from botocore.exceptions import ClientError
 
 from .parser import parse_template, get_app_metadata, parse_application_id
 
-_serverlessrepo = boto3.client('serverlessrepo')
+SERVERLESSREPO = boto3.client('serverlessrepo')
 
 
 def publish_application(template):
@@ -24,7 +24,7 @@ def publish_application(template):
 
     try:
         request = _create_application_request(app_metadata, template)
-        response = _serverlessrepo.create_application(**request)
+        response = SERVERLESSREPO.create_application(**request)
         application_id = response['ApplicationId']
     except ClientError as e:
         if not _is_conflict_exception(e):
@@ -34,11 +34,11 @@ def publish_application(template):
         error_message = e.response['Error']['Message']
         application_id = parse_application_id(error_message)
         request = _update_application_request(app_metadata, application_id)
-        _serverlessrepo.update_application(**request)
+        SERVERLESSREPO.update_application(**request)
 
         # Create an application version
         request = _create_application_version_request(app_metadata, application_id, template)
-        _serverlessrepo.create_application_version(**request)
+        SERVERLESSREPO.create_application_version(**request)
 
     return {
         'application_id': application_id,
@@ -62,7 +62,7 @@ def publish_application_metadata(template, application_id):
     template_dict = parse_template(template)
     app_metadata = get_app_metadata(template_dict)
     request = _update_application_request(app_metadata, application_id)
-    _serverlessrepo.update_application(**request)
+    SERVERLESSREPO.update_application(**request)
 
 
 def _create_application_request(app_metadata, template):

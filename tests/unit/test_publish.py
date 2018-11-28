@@ -1,5 +1,5 @@
 from unittest import TestCase
-from mock import Mock, patch
+from mock import patch
 from botocore.exceptions import ClientError
 
 from serverlessrepo import publish_application, publish_application_metadata
@@ -9,10 +9,9 @@ from serverlessrepo.exceptions import InvalidApplicationMetadataError
 class TestPublishApplication(TestCase):
 
     def setUp(self):
-        self.patcher = patch('serverlessrepo.publish.boto3')
-        self.boto3_mock = self.patcher.start()
-        self.serverlessrepo_mock = Mock()
-        self.boto3_mock.client.return_value = self.serverlessrepo_mock
+        patcher = patch('serverlessrepo.publish.SERVERLESSREPO')
+        self.addCleanup(patcher.stop)
+        self.serverlessrepo_mock = patcher.start()
         self.template = """
         {
             "Metadata": {
@@ -157,16 +156,12 @@ class TestPublishApplication(TestCase):
         # create_application_version shouldn't be called if version is not provided
         self.serverlessrepo_mock.create_application_version.assert_not_called()
 
-    def tearDown(self):
-        self.patcher.stop()
-
 
 class TestPublishApplicationMetadata(TestCase):
     def setUp(self):
-        self.patcher = patch('serverlessrepo.publish.boto3')
-        self.boto3_mock = self.patcher.start()
-        self.serverlessrepo_mock = Mock()
-        self.boto3_mock.client.return_value = self.serverlessrepo_mock
+        patcher = patch('serverlessrepo.publish.SERVERLESSREPO')
+        self.addCleanup(patcher.stop)
+        self.serverlessrepo_mock = patcher.start()
         self.template = """
         {
             "Metadata": {
@@ -208,6 +203,3 @@ class TestPublishApplicationMetadata(TestCase):
             'Description': 'hello world'
         }
         self.serverlessrepo_mock.update_application.assert_called_once_with(**expected_request)
-
-    def tearDown(self):
-        self.patcher.stop()
