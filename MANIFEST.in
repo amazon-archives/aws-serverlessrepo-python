@@ -1,0 +1,3 @@
+include README.md LICENSE NOTICE CONTRIBUTING.md CODE_OF_CONDUCT.md
+include Pipfile Pipfile.lock Makefile
+recursive-include tests *.py
