@@ -2,7 +2,7 @@
 
 
 class ServerlessRepoError(Exception):
-    """Raised when invalid application metadata is provided."""
+    """Base exception raised by serverlessrepo library."""
 
     MESSAGE = ''
 
