@@ -1,12 +1,12 @@
+"""Module containing class to store SAR application permissions."""
+
 import re
 
 from .exceptions import InvalidApplicationPolicyError
 
 
 class ApplicationPolicy(object):
-    """
-    Class representing SAR application policy
-    """
+    """Class representing SAR application policy."""
 
     # Supported actions for setting SAR application permissions
     GET_APPLICATION = 'GetApplication'
@@ -31,7 +31,7 @@ class ApplicationPolicy(object):
 
     def __init__(self, principals, actions):
         """
-        Initializes the object given the principals and actions
+        Initialize the object given the principals and actions.
 
         :param principals: List of AWS account IDs, or *
         :type principals: list of str
@@ -43,7 +43,7 @@ class ApplicationPolicy(object):
 
     def validate(self):
         """
-        Checks if the formats of principals and actions are valid
+        Check if the formats of principals and actions are valid.
 
         :return: True, if the policy is valid
         :raises: InvalidApplicationPolicyError
@@ -59,7 +59,7 @@ class ApplicationPolicy(object):
                 error_message='principal should be 12-digit AWS account ID or "*"')
 
         unsupported_actions = sorted(set(self.actions) - set(self.SUPPORTED_ACTIONS))
-        if len(unsupported_actions):
+        if unsupported_actions:
             raise InvalidApplicationPolicyError(
                 error_message='{} not supported'.format(', '.join(unsupported_actions)))
 
@@ -67,7 +67,7 @@ class ApplicationPolicy(object):
 
     def to_statement(self):
         """
-        Converts to a policy statement dictionary
+        Convert to a policy statement dictionary.
 
         :return: Dictionary containing Actions and Principals
         :rtype: dict

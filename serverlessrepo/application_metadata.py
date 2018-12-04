@@ -1,10 +1,10 @@
+"""Module containing class to store SAR application metadata."""
+
 from .exceptions import InvalidApplicationMetadataError
 
 
 class ApplicationMetadata(object):
-    """
-    Class representing SAR metadata
-    """
+    """Class representing SAR metadata."""
 
     # SAM template SAR metadata properties
     _NAME = 'Name'
@@ -20,7 +20,7 @@ class ApplicationMetadata(object):
 
     def __init__(self, app_metadata):
         """
-        Initializes the object given SAR metadata properties
+        Initialize the object given SAR metadata properties.
 
         :param app_metadata: Dictionary containing SAR metadata properties
         :type app_metadata: dict
@@ -37,11 +37,12 @@ class ApplicationMetadata(object):
         self.source_code_url = app_metadata.get(self._SOURCE_CODE_URL)
 
     def __eq__(self, other):
+        """Return whether two ApplicationMetadata objects are equal."""
         return isinstance(other, type(self)) and self.__dict__ == other.__dict__
 
     def validate(self, required_props):
         """
-        Checks if the required application metadata properties have been populated
+        Check if the required application metadata properties have been populated.
 
         :param required_props: List of required properties
         :type required_props: list

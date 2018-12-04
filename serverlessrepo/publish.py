@@ -1,3 +1,5 @@
+"""Module containing functions to publish or update application."""
+
 import boto3
 from botocore.exceptions import ClientError
 
@@ -8,7 +10,7 @@ SERVERLESSREPO = boto3.client('serverlessrepo')
 
 def publish_application(template):
     """
-    This function publishes the application
+    Create a new application or new application version in SAR.
 
     :param template: A packaged YAML or JSON SAM template
     :type template: str
@@ -46,9 +48,9 @@ def publish_application(template):
     }
 
 
-def publish_application_metadata(template, application_id):
+def update_application_metadata(template, application_id):
     """
-    This function updates the application metadata
+    Update the application metadata.
 
     :param template: A packaged YAML or JSON SAM template
     :type template: str
@@ -67,7 +69,7 @@ def publish_application_metadata(template, application_id):
 
 def _create_application_request(app_metadata, template):
     """
-    This function constructs the request body to create application
+    Construct the request body to create application.
 
     :param app_metadata: Object containing app metadata
     :type app_metadata: ApplicationMetadata
@@ -96,7 +98,7 @@ def _create_application_request(app_metadata, template):
 
 def _update_application_request(app_metadata, application_id):
     """
-    This function constructs the request body to update application
+    Construct the request body to update application.
 
     :param app_metadata: Object containing app metadata
     :type app_metadata: ApplicationMetadata
@@ -118,7 +120,7 @@ def _update_application_request(app_metadata, application_id):
 
 def _create_application_version_request(app_metadata, application_id, template):
     """
-    This function constructs the request body to create application version
+    Construct the request body to create application version.
 
     :param app_metadata: Object containing app metadata
     :type app_metadata: ApplicationMetadata
@@ -141,7 +143,7 @@ def _create_application_version_request(app_metadata, application_id, template):
 
 def _is_conflict_exception(e):
     """
-    This function checks whether the boto3 ClientError is ConflictException
+    Check whether the boto3 ClientError is ConflictException.
 
     :param e: boto3 exception
     :type e: ClientError

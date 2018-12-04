@@ -1,6 +1,4 @@
-"""
-Serverlessrepo version and package meta-data.
-"""
+"""Serverlessrepo version and package meta-data."""
 
 __title__ = 'serverlessrepo'
 __version__ = '0.1.0'
@@ -11,4 +9,4 @@ __description__ = (
 )
 __url__ = 'https://github.com/awslabs/aws-serverlessrepo-python'
 __author__ = 'Amazon Web Services'
-__author_email__ = '<TBD>'
+__author_email__ = 'aws-sam-developer@amazon.com'
