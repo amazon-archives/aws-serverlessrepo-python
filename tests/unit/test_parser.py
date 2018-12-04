@@ -1,8 +1,9 @@
+import re
 from unittest import TestCase
 
 from serverlessrepo.exceptions import ApplicationMetadataNotFoundError
 from serverlessrepo.application_metadata import ApplicationMetadata
-from serverlessrepo.parser import parse_template, yaml_dump, get_app_metadata
+import serverlessrepo.parser as parser
 
 
 class TestParser(TestCase):
@@ -46,13 +47,13 @@ class TestParser(TestCase):
     }
 
     def test_parse_yaml_with_tags(self):
-        output = parse_template(self.yaml_with_tags)
-        self.assertEquals(self.parsed_yaml_dict, output)
+        output = parser.parse_template(self.yaml_with_tags)
+        self.assertEqual(self.parsed_yaml_dict, output)
 
         # Make sure formatter and parser work well with each other
-        formatted_str = yaml_dump(output)
-        output_again = parse_template(formatted_str)
-        self.assertEquals(output, output_again)
+        formatted_str = parser.yaml_dump(output)
+        output_again = parser.parse_template(formatted_str)
+        self.assertEqual(output, output_again)
 
     def test_yaml_getatt(self):
         # This is an invalid syntax for !GetAtt. But make sure the code does not crash when we encouter this syntax
@@ -70,12 +71,12 @@ class TestParser(TestCase):
             }
         }
 
-        actual_output = parse_template(input)
-        self.assertEquals(actual_output, output)
+        actual_output = parser.parse_template(input)
+        self.assertEqual(actual_output, output)
 
     def test_parse_json_with_tabs(self):
         template = '{\n\t"foo": "bar"\n}'
-        output = parse_template(template)
+        output = parser.parse_template(template)
         self.assertEqual(output, {'foo': 'bar'})
 
     def test_parse_yaml_preserve_elements_order(self):
@@ -91,7 +92,7 @@ class TestParser(TestCase):
             Key1:
                 Name: name1
         """
-        output_dict = parse_template(input_template)
+        output_dict = parser.parse_template(input_template)
         expected_dict = {
             'B_Resource': {
                 'Key2': {'Name': 'name2'},
@@ -103,10 +104,10 @@ class TestParser(TestCase):
             }
         }
         self.assertEqual(expected_dict, output_dict)
-        output_template = yaml_dump(output_dict)
+        output_template = parser.yaml_dump(output_dict)
         # yaml dump changes indentation, remove spaces and new line characters to just compare the text
-        self.assertEqual(input_template.translate(None, '\n '),
-                         output_template.translate(None, '\n '))
+        self.assertEqual(re.sub(r'\n|\s', '', input_template),
+                         re.sub(r'\n|\s', '', output_template))
 
     def test_get_app_metadata_missing_metadata(self):
         template_dict_without_metadata = {
@@ -115,7 +116,7 @@ class TestParser(TestCase):
             }
         }
         with self.assertRaises(ApplicationMetadataNotFoundError) as context:
-            get_app_metadata(template_dict_without_metadata)
+            parser.get_app_metadata(template_dict_without_metadata)
 
         message = str(context.exception)
         expected = 'missing AWS::ServerlessRepo::Application section in template Metadata'
@@ -128,7 +129,7 @@ class TestParser(TestCase):
             }
         }
         with self.assertRaises(ApplicationMetadataNotFoundError) as context:
-            get_app_metadata(template_dict_without_app_metadata)
+            parser.get_app_metadata(template_dict_without_app_metadata)
 
         message = str(context.exception)
         expected = 'missing AWS::ServerlessRepo::Application section in template Metadata'
@@ -148,5 +149,28 @@ class TestParser(TestCase):
         }
 
         expected = ApplicationMetadata(app_metadata)
-        actual = get_app_metadata(template_dict)
+        actual = parser.get_app_metadata(template_dict)
         self.assertEqual(expected, actual)
+
+    def test_parse_application_id_aws_partition(self):
+        application_id = 'arn:aws:serverlessrepo:us-east-1:123456789012:applications/test-app'
+        text_with_application_id = 'Application with id {} already exists.'.format(application_id)
+        result = parser.parse_application_id(text_with_application_id)
+        self.assertEqual(result, application_id)
+
+    def test_parse_application_id_aws_cn_partition(self):
+        application_id = 'arn:aws-cn:serverlessrepo:cn-northwest-1:123456789012:applications/test-app'
+        text_with_application_id = 'Application with id {} already exists.'.format(application_id)
+        result = parser.parse_application_id(text_with_application_id)
+        self.assertEqual(result, application_id)
+
+    def test_parse_application_id_aws_us_gov_partition(self):
+        application_id = 'arn:aws-us-gov:serverlessrepo:us-gov-east-1:123456789012:applications/test-app'
+        text_with_application_id = 'Application with id {} already exists.'.format(application_id)
+        result = parser.parse_application_id(text_with_application_id)
+        self.assertEqual(result, application_id)
+
+    def test_parse_application_id_return_none(self):
+        text_without_application_id = 'text without application id'
+        result = parser.parse_application_id(text_without_application_id)
+        self.assertIsNone(result)

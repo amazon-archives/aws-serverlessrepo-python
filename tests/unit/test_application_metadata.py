@@ -32,7 +32,7 @@ class TestApplicationMetadata(TestCase):
         self.assertEqual(app_metadata.source_code_url, app_metadata_dict['SourceCodeUrl'])
 
     def test_invalid_app_metadata(self):
-        app_metadata_dict = { 'description': 'hello' }
+        app_metadata_dict = {'description': 'hello'}
         app_metadata = ApplicationMetadata(app_metadata_dict)
         required_props = ['author', 'name']
         with self.assertRaises(InvalidApplicationMetadataError) as context:

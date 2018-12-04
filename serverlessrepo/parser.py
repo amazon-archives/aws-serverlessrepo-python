@@ -2,6 +2,7 @@
 Helper to parse JSON/YAML SAM template and dump YAML files
 """
 
+import re
 import json
 import six
 import yaml
@@ -13,6 +14,7 @@ from .exceptions import ApplicationMetadataNotFoundError
 
 METADATA = 'Metadata'
 SERVERLESS_REPO_APPLICATION = 'AWS::ServerlessRepo::Application'
+APPLICATION_ID_PATTERN = r'arn:[\w\-]+:serverlessrepo:[\w\-]+:[0-9]+:applications\/[\S]+'
 
 
 def intrinsics_multi_constructor(loader, tag_prefix, node):
@@ -108,3 +110,8 @@ def get_app_metadata(template_dict):
     else:
         raise ApplicationMetadataNotFoundError(
             error_message='missing {} section in template Metadata'.format(SERVERLESS_REPO_APPLICATION))
+
+
+def parse_application_id(text):
+    result = re.search(APPLICATION_ID_PATTERN, text)
+    return result.group(0) if result else None
