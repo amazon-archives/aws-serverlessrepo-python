@@ -15,8 +15,8 @@ flake:
 lint:
 	# Linter performs static analysis to catch latent bugs
 	pipenv run pylint --rcfile .pylintrc serverlessrepo
-	# Ignore missing docstring errors for tests
-	pipenv run pylint --rcfile .pylintrc tests --disable=C0111
+	# Ignore missing docstring and invalid method name errors for tests
+	pipenv run pylint --rcfile .pylintrc tests --disable=C0111,C0103
 
 # Command to run everytime you make changes to verify everything works
 build: flake lint test
