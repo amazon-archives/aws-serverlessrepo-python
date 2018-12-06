@@ -4,6 +4,12 @@ from botocore.exceptions import ClientError
 
 from serverlessrepo import publish_application, update_application_metadata
 from serverlessrepo.exceptions import InvalidApplicationMetadataError
+from serverlessrepo.parser import parse_template, get_app_metadata
+from serverlessrepo.publish import (
+    CREATE_APPLICATION,
+    UPDATE_APPLICATION,
+    CREATE_APPLICATION_VERSION
+)
 
 
 class TestPublishApplication(TestCase):
@@ -19,6 +25,11 @@ class TestPublishApplication(TestCase):
                     'Name': 'test-app',
                     'Description': 'hello world',
                     'Author': 'abc',
+                    'LicenseUrl': 's3://test-bucket/LICENSE',
+                    'ReadmeUrl': 's3://test-bucket/README.md',
+                    'Labels': ['test1', 'test2'],
+                    'HomePageUrl': 'https://github.com/abc/def',
+                    'SourceCodeUrl': 'https://github.com/abc/def',
                     'SemanticVersion': '1.0.0'
                 }
             }
@@ -31,6 +42,12 @@ class TestPublishApplication(TestCase):
                     'Code': 'ConflictException',
                     'Message': 'Application with id {} already exists'.format(self.application_id)
                 }
+            },
+            'create_application'
+        )
+        self.not_conflict_exception = ClientError(
+            {
+                'Error': {'Code': 'BadRequestException'}
             },
             'create_application'
         )
@@ -50,36 +67,22 @@ class TestPublishApplication(TestCase):
         }
 
         actual_result = publish_application(self.template)
+        app_metadata_template = get_app_metadata(parse_template(self.template)).template_dict
         expected_result = {
             'application_id': self.application_id,
-            'semantic_version': '1.0.0'
+            'actions': [CREATE_APPLICATION],
+            'details': app_metadata_template
         }
         self.assertEqual(expected_result, actual_result)
 
-        expected_request = {
-            'Author': 'abc',
-            'Description': 'hello world',
-            'Name': 'test-app',
-            'SemanticVersion': '1.0.0',
-            'TemplateBody': self.template
-        }
+        expected_request = dict({'TemplateBody': self.template}, **app_metadata_template)
         self.serverlessrepo_mock.create_application.assert_called_once_with(**expected_request)
         # publish a new application will only call create_application
         self.serverlessrepo_mock.update_application.assert_not_called()
         self.serverlessrepo_mock.create_application_version.assert_not_called()
 
     def test_publish_exception_when_validate_create_application_request(self):
-        template_without_app_name = """
-        {
-            "Metadata": {
-                'AWS::ServerlessRepo::Application': {
-                    'Description': 'hello world',
-                    'Author': 'abc',
-                    'SemanticVersion': '1.0.0'
-                }
-            }
-        }
-        """
+        template_without_app_name = self.template.replace("'Name': 'test-app',", '')
         with self.assertRaises(InvalidApplicationMetadataError) as context:
             publish_application(template_without_app_name)
 
@@ -89,10 +92,9 @@ class TestPublishApplication(TestCase):
         self.serverlessrepo_mock.create_application.assert_not_called()
 
     def test_publish_exception_when_serverlessrepo_create_application(self):
-        self.serverlessrepo_mock.create_application.side_effect = ClientError(
-            {'Error': {'Code': 'BadRequestException'}},
-            'create_application'
-        )
+        self.serverlessrepo_mock.create_application.side_effect = self.not_conflict_exception
+
+        # should raise exception if it's not ConflictException
         with self.assertRaises(ClientError):
             publish_application(self.template)
 
@@ -100,25 +102,75 @@ class TestPublishApplication(TestCase):
         self.serverlessrepo_mock.update_application.assert_not_called()
         self.serverlessrepo_mock.create_application_version.assert_not_called()
 
-    def test_publish_existing_application_should_update_application(self):
+    def test_publish_existing_application_should_update_application_if_version_not_specified(self):
         self.serverlessrepo_mock.create_application.side_effect = self.application_exists_error
-        publish_application(self.template)
+        template_without_version = self.template.replace("'SemanticVersion': '1.0.0'", '')
+
+        actual_result = publish_application(template_without_version)
+        expected_result = {
+            'application_id': self.application_id,
+            'actions': [UPDATE_APPLICATION],
+            'details': {
+                # Name, LicenseUrl and SourceCodeUrl shouldn't show up
+                'Description': 'hello world',
+                'Author': 'abc',
+                'ReadmeUrl': 's3://test-bucket/README.md',
+                'Labels': ['test1', 'test2'],
+                'HomePageUrl': 'https://github.com/abc/def'
+            }
+        }
+        self.assertEqual(expected_result, actual_result)
+
         self.serverlessrepo_mock.create_application.assert_called_once()
         # should continue to update application if the exception is application already exists
-        expected_request = {
-            'ApplicationId': self.application_id,
-            'Author': 'abc',
-            'Description': 'hello world'
-        }
+        expected_request = dict({'ApplicationId': self.application_id}, **expected_result['details'])
         self.serverlessrepo_mock.update_application.assert_called_once_with(**expected_request)
+        # create_application_version shouldn't be called if version is not provided
+        self.serverlessrepo_mock.create_application_version.assert_not_called()
 
-    def test_publish_existing_application_should_create_application_version(self):
+    def test_publish_existing_application_should_update_application_if_version_exists(self):
+        self.serverlessrepo_mock.create_application.side_effect = self.application_exists_error
+        self.serverlessrepo_mock.create_application_version.side_effect = ClientError(
+            {'Error': {'Code': 'ConflictException'}},
+            'create_application_version'
+        )
+
+        actual_result = publish_application(self.template)
+        expected_result = {
+            'application_id': self.application_id,
+            'actions': [UPDATE_APPLICATION],
+            'details': {
+                # Name, LicenseUrl and SourceCodeUrl shouldn't show up
+                'Description': 'hello world',
+                'Author': 'abc',
+                'Labels': ['test1', 'test2'],
+                'HomePageUrl': 'https://github.com/abc/def',
+                'ReadmeUrl': 's3://test-bucket/README.md'
+            }
+        }
+        self.assertEqual(expected_result, actual_result)
+
+        self.serverlessrepo_mock.create_application.assert_called_once()
+        self.serverlessrepo_mock.update_application.assert_called_once()
+        self.serverlessrepo_mock.create_application_version.assert_called_once()
+
+    def test_publish_new_version_should_create_application_version(self):
         self.serverlessrepo_mock.create_application.side_effect = self.application_exists_error
 
         actual_result = publish_application(self.template)
         expected_result = {
             'application_id': self.application_id,
-            'semantic_version': '1.0.0'
+            'actions': [UPDATE_APPLICATION, CREATE_APPLICATION_VERSION],
+            'details': {
+                # Name and LicenseUrl shouldn't show up since they can't be updated
+                'Description': 'hello world',
+                'Author': 'abc',
+                'ReadmeUrl': 's3://test-bucket/README.md',
+                'Labels': ['test1', 'test2'],
+                'HomePageUrl': 'https://github.com/abc/def',
+                'SourceCodeUrl': 'https://github.com/abc/def',
+                'SemanticVersion': '1.0.0'
+            }
         }
         self.assertEqual(expected_result, actual_result)
 
@@ -127,34 +179,19 @@ class TestPublishApplication(TestCase):
         # should continue to create application version
         expected_request = {
             'ApplicationId': self.application_id,
+            'SourceCodeUrl': 'https://github.com/abc/def',
             'SemanticVersion': '1.0.0',
             'TemplateBody': self.template
         }
         self.serverlessrepo_mock.create_application_version.assert_called_once_with(**expected_request)
 
-    def test_publish_existing_application_should_throw_exception_if_version_not_specified(self):
+    def test_publish_exception_when_serverlessrepo_create_application_version(self):
         self.serverlessrepo_mock.create_application.side_effect = self.application_exists_error
-        template_without_semantic_version = """
-        {
-            "Metadata": {
-                'AWS::ServerlessRepo::Application': {
-                    'Name': 'test-app',
-                    'Description': 'new description',
-                    'Author': 'new author',
-                }
-            }
-        }
-        """
-        with self.assertRaises(InvalidApplicationMetadataError) as context:
-            publish_application(template_without_semantic_version)
+        self.serverlessrepo_mock.create_application_version.side_effect = self.not_conflict_exception
 
-        message = str(context.exception)
-        self.assertEqual("Required application metadata properties not provided: 'semantic_version'", message)
-
-        self.serverlessrepo_mock.create_application.assert_called_once()
-        self.serverlessrepo_mock.update_application.assert_called_once()
-        # create_application_version shouldn't be called if version is not provided
-        self.serverlessrepo_mock.create_application_version.assert_not_called()
+        # should raise exception if it's not ConflictException
+        with self.assertRaises(ClientError):
+            publish_application(self.template)
 
 
 class TestPublishApplicationMetadata(TestCase):

@@ -3,9 +3,13 @@
 import boto3
 from botocore.exceptions import ClientError
 
+from .application_metadata import ApplicationMetadata
 from .parser import parse_template, get_app_metadata, parse_application_id
 
 SERVERLESSREPO = boto3.client('serverlessrepo')
+CREATE_APPLICATION = 'CREATE_APPLICATION'
+UPDATE_APPLICATION = 'UPDATE_APPLICATION'
+CREATE_APPLICATION_VERSION = 'CREATE_APPLICATION_VERSION'
 
 
 def publish_application(template):
@@ -28,6 +32,7 @@ def publish_application(template):
         request = _create_application_request(app_metadata, template)
         response = SERVERLESSREPO.create_application(**request)
         application_id = response['ApplicationId']
+        actions = [CREATE_APPLICATION]
     except ClientError as e:
         if not _is_conflict_exception(e):
             raise
@@ -37,14 +42,22 @@ def publish_application(template):
         application_id = parse_application_id(error_message)
         request = _update_application_request(app_metadata, application_id)
         SERVERLESSREPO.update_application(**request)
+        actions = [UPDATE_APPLICATION]
 
-        # Create an application version
-        request = _create_application_version_request(app_metadata, application_id, template)
-        SERVERLESSREPO.create_application_version(**request)
+        # Create application version if semantic version is specified
+        if app_metadata.semantic_version:
+            try:
+                request = _create_application_version_request(app_metadata, application_id, template)
+                SERVERLESSREPO.create_application_version(**request)
+                actions.append(CREATE_APPLICATION_VERSION)
+            except ClientError as e:
+                if not _is_conflict_exception(e):
+                    raise
 
     return {
         'application_id': application_id,
-        'semantic_version': app_metadata.semantic_version
+        'actions': actions,
+        'details': _get_publish_details(actions, app_metadata.template_dict)
     }
 
 
@@ -151,3 +164,32 @@ def _is_conflict_exception(e):
     """
     error_code = e.response['Error']['Code']
     return error_code == 'ConflictException'
+
+
+def _get_publish_details(actions, app_metadata_template):
+    """
+    Get the changed application details after publishing.
+
+    :param actions: Actions taken during publishing
+    :type actions: list of str
+    :param app_metadata_template: Original template definitions of app metadata
+    :type app_metadata_template: dict
+    :return: Updated fields and values of the application
+    :rtype: dict
+    """
+    if actions == [CREATE_APPLICATION]:
+        return {k: v for k, v in app_metadata_template.items() if v}
+
+    include_keys = [
+        ApplicationMetadata.AUTHOR,
+        ApplicationMetadata.DESCRIPTION,
+        ApplicationMetadata.HOME_PAGE_URL,
+        ApplicationMetadata.LABELS,
+        ApplicationMetadata.README_URL
+    ]
+
+    if CREATE_APPLICATION_VERSION in actions:
+        # SemanticVersion and SourceCodeUrl can only be updated by creating a new version
+        additional_keys = [ApplicationMetadata.SEMANTIC_VERSION, ApplicationMetadata.SOURCE_CODE_URL]
+        include_keys.extend(additional_keys)
+    return {k: v for k, v in app_metadata_template.items() if k in include_keys and v}

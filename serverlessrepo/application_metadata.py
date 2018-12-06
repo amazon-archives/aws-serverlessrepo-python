@@ -7,16 +7,16 @@ class ApplicationMetadata(object):
     """Class representing SAR metadata."""
 
     # SAM template SAR metadata properties
-    _NAME = 'Name'
-    _DESCRIPTION = 'Description'
-    _AUTHOR = 'Author'
-    _SPDX_LICENSE_ID = 'SpdxLicenseId'
-    _LICENSE_URL = 'LicenseUrl'
-    _README_URL = 'ReadmeUrl'
-    _LABELS = 'Labels'
-    _HOMEPAGE_URL = 'HomepageUrl'
-    _SEMANTIC_VERSION = 'SemanticVersion'
-    _SOURCE_CODE_URL = 'SourceCodeUrl'
+    NAME = 'Name'
+    DESCRIPTION = 'Description'
+    AUTHOR = 'Author'
+    SPDX_LICENSE_ID = 'SpdxLicenseId'
+    LICENSE_URL = 'LicenseUrl'
+    README_URL = 'ReadmeUrl'
+    LABELS = 'Labels'
+    HOME_PAGE_URL = 'HomePageUrl'
+    SEMANTIC_VERSION = 'SemanticVersion'
+    SOURCE_CODE_URL = 'SourceCodeUrl'
 
     def __init__(self, app_metadata):
         """
@@ -25,16 +25,17 @@ class ApplicationMetadata(object):
         :param app_metadata: Dictionary containing SAR metadata properties
         :type app_metadata: dict
         """
-        self.name = app_metadata.get(self._NAME)
-        self.description = app_metadata.get(self._DESCRIPTION)
-        self.author = app_metadata.get(self._AUTHOR)
-        self.spdx_license_id = app_metadata.get(self._SPDX_LICENSE_ID)
-        self.license_url = app_metadata.get(self._LICENSE_URL)
-        self.readme_url = app_metadata.get(self._README_URL)
-        self.labels = app_metadata.get(self._LABELS)
-        self.home_page_url = app_metadata.get(self._HOMEPAGE_URL)
-        self.semantic_version = app_metadata.get(self._SEMANTIC_VERSION)
-        self.source_code_url = app_metadata.get(self._SOURCE_CODE_URL)
+        self.template_dict = app_metadata  # save the original template definitions
+        self.name = app_metadata.get(self.NAME)
+        self.description = app_metadata.get(self.DESCRIPTION)
+        self.author = app_metadata.get(self.AUTHOR)
+        self.spdx_license_id = app_metadata.get(self.SPDX_LICENSE_ID)
+        self.license_url = app_metadata.get(self.LICENSE_URL)
+        self.readme_url = app_metadata.get(self.README_URL)
+        self.labels = app_metadata.get(self.LABELS)
+        self.home_page_url = app_metadata.get(self.HOME_PAGE_URL)
+        self.semantic_version = app_metadata.get(self.SEMANTIC_VERSION)
+        self.source_code_url = app_metadata.get(self.SOURCE_CODE_URL)
 
     def __eq__(self, other):
         """Return whether two ApplicationMetadata objects are equal."""
