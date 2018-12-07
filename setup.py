@@ -6,9 +6,9 @@ from setuptools import setup, find_packages
 
 # Required packages for this module to work
 REQUIRED = [
-    'pyyaml',
-    'boto3',
-    'six'
+    'pyyaml~=3.12',
+    'boto3~=1.9, >=1.9.56',
+    'six~=1.11.0'
 ]
 
 # Optional packages for this module to work

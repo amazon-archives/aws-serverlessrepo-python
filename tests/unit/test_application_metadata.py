@@ -15,7 +15,7 @@ class TestApplicationMetadata(TestCase):
             'LicenseUrl': 's3://bucket/license.txt',
             'ReadmeUrl': 's3://bucket/README.md',
             'Labels': ['label1', 'label2', 'label3'],
-            'HomepageUrl': 'https://github.com/my-id/my-repo/',
+            'HomePageUrl': 'https://github.com/my-id/my-repo/',
             'SemanticVersion': '1.0.0',
             'SourceCodeUrl': 's3://bucket/code.zip'
         }
@@ -27,7 +27,7 @@ class TestApplicationMetadata(TestCase):
         self.assertEqual(app_metadata.license_url, app_metadata_dict['LicenseUrl'])
         self.assertEqual(app_metadata.readme_url, app_metadata_dict['ReadmeUrl'])
         self.assertEqual(app_metadata.labels, app_metadata_dict['Labels'])
-        self.assertEqual(app_metadata.home_page_url, app_metadata_dict['HomepageUrl'])
+        self.assertEqual(app_metadata.home_page_url, app_metadata_dict['HomePageUrl'])
         self.assertEqual(app_metadata.semantic_version, app_metadata_dict['SemanticVersion'])
         self.assertEqual(app_metadata.source_code_url, app_metadata_dict['SourceCodeUrl'])
 
