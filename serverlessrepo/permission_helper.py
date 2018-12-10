@@ -9,6 +9,8 @@ def make_application_public(application_id):
     """
     Set the application to be public.
 
+    :param application_id: The Amazon Resource Name (ARN) of the application
+    :type application_id: str
     :raises ValueError
     """
     if not application_id:
@@ -26,6 +28,8 @@ def make_application_private(application_id):
     """
     Set the application to be private.
 
+    :param application_id: The Amazon Resource Name (ARN) of the application
+    :type application_id: str
     :raises ValueError
     """
     if not application_id:
@@ -41,6 +45,8 @@ def share_application_with_accounts(application_id, account_ids):
     """
     Share the application privately with given AWS account IDs.
 
+    :param application_id: The Amazon Resource Name (ARN) of the application
+    :type application_id: str
     :param account_ids: List of AWS account IDs, or *
     :type account_ids: list of str
     :raises ValueError

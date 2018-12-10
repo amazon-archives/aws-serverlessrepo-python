@@ -22,25 +22,52 @@ import serverlessrepo
 
 #### publish_application(template)
 
-Given an [AWS Serverless Application Model (SAM)](https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md) template, it publishes a new application using the specified metadata in AWS Serverless Application Repository. If the application already exists, it publishes a new application version.
+Given an [AWS Serverless Application Model (SAM)](https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md) template, it publishes a new application using the specified metadata in AWS Serverless Application Repository. If the application already exists, it updates metadata of the application and publishes a new version if specified in the template.
 
-#### update_application_metadata(template, application_id)
-
-Parses the application metadata from the SAM template and updates the application.
-
-#### Examples
-
-Publish an application using local file template.yaml:
+For example:
 
 ```python
 from serverlessrepo import publish_application
 
 with open('template.yaml', 'r') as f:
     template = f.read()
-    publish_application(template)
+    output = publish_application(template)
+    print (output)
 ```
 
-Or updates the application's metadata using template.yaml:
+The output of `publish_application` has the following structure:
+
+```text
+{
+    'application_id': 'arn:aws:serverlessrepo:us-east-1:123456789012:applications/test-app',
+    'actions': ['CREATE_APPLICATION'],
+    'details': {
+        'Author': 'user1',
+        'Description': 'hello',
+        'Name': 'hello-world',
+        'SemanticVersion': '0.0.1',
+        'SourceCodeUrl': 'https://github.com/hello'}
+    }
+}
+```
+
+There are three possible values for the `actions` field:
+
+* `['CREATE_APPLICATION']` - Created a new application.
+* `['UPDATE_APPLICATION']` - Updated metadata of an existing application.
+* `['UPDATE_APPLICATION', 'CREATE_APPLICATION_VERSION']` - Updated metadata of an existing application and created a new version, only applicable if a new SemanticVersion is provided in the input template.
+
+`details` has different meaning based on the `actions` taken:
+
+* If a new application is created, it shows metadata values used to create the application.
+* If application is updated, it shows updated metadata values.
+* If application is updated and new version is created, it shows updated metadata values as well as the new version number.
+
+#### update_application_metadata(template, application_id)
+
+Parses the application metadata from the SAM template and only updates the metadata.
+
+For example:
 
 ```python
 from serverlessrepo import update_application_metadata
@@ -88,8 +115,8 @@ share_application_with_accounts(application_id, ['123456789013', '123456789014']
 
 ## Development
 
-* Clone the project to your local:
-  * `git clone https://github.com/awslabs/aws-serverlessrepo-python.git`
+* Fork the repository, then clone to your local:
+  * `git clone https://github.com/<username>/aws-serverlessrepo-python.git`
 * Set up the environment: `make init`
   * It installs [Pipenv](https://github.com/pypa/pipenv) to manage package dependencies. Then it creates a virtualenv and installs dependencies from [Pipfile](./Pipfile) (including dev).
 * Install new packages: `pipenv install [package names]`

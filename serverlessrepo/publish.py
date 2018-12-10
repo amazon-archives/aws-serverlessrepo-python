@@ -6,7 +6,6 @@ from botocore.exceptions import ClientError
 from .application_metadata import ApplicationMetadata
 from .parser import parse_template, get_app_metadata, parse_application_id
 
-SERVERLESSREPO = boto3.client('serverlessrepo')
 CREATE_APPLICATION = 'CREATE_APPLICATION'
 UPDATE_APPLICATION = 'UPDATE_APPLICATION'
 CREATE_APPLICATION_VERSION = 'CREATE_APPLICATION_VERSION'
@@ -18,7 +17,7 @@ def publish_application(template):
 
     :param template: A packaged YAML or JSON SAM template
     :type template: str
-    :return: Dictionary containing application id and version
+    :return: Dictionary containing application id, actions taken, and updated details
     :rtype: dict
     :raises ValueError
     """
@@ -27,10 +26,11 @@ def publish_application(template):
 
     template_dict = parse_template(template)
     app_metadata = get_app_metadata(template_dict)
+    serverlessrepo = boto3.client('serverlessrepo')
 
     try:
         request = _create_application_request(app_metadata, template)
-        response = SERVERLESSREPO.create_application(**request)
+        response = serverlessrepo.create_application(**request)
         application_id = response['ApplicationId']
         actions = [CREATE_APPLICATION]
     except ClientError as e:
@@ -41,14 +41,14 @@ def publish_application(template):
         error_message = e.response['Error']['Message']
         application_id = parse_application_id(error_message)
         request = _update_application_request(app_metadata, application_id)
-        SERVERLESSREPO.update_application(**request)
+        serverlessrepo.update_application(**request)
         actions = [UPDATE_APPLICATION]
 
         # Create application version if semantic version is specified
         if app_metadata.semantic_version:
             try:
                 request = _create_application_version_request(app_metadata, application_id, template)
-                SERVERLESSREPO.create_application_version(**request)
+                serverlessrepo.create_application_version(**request)
                 actions.append(CREATE_APPLICATION_VERSION)
             except ClientError as e:
                 if not _is_conflict_exception(e):
@@ -77,7 +77,7 @@ def update_application_metadata(template, application_id):
     template_dict = parse_template(template)
     app_metadata = get_app_metadata(template_dict)
     request = _update_application_request(app_metadata, application_id)
-    SERVERLESSREPO.update_application(**request)
+    boto3.client('serverlessrepo').update_application(**request)
 
 
 def _create_application_request(app_metadata, template):
