@@ -20,18 +20,22 @@ import serverlessrepo
 
 ### Publish Applications
 
-#### publish_application(template)
+#### publish_application(template, sar_client)
 
 Given an [AWS Serverless Application Model (SAM)](https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md) template, it publishes a new application using the specified metadata in AWS Serverless Application Repository. If the application already exists, it updates metadata of the application and publishes a new version if specified in the template.
 
 For example:
 
 ```python
+import boto3
 from serverlessrepo import publish_application
+
+sar_client = boto3.client('serverlessrepo', region_name='us-east-1')
 
 with open('template.yaml', 'r') as f:
     template = f.read()
-    output = publish_application(template)
+    # if sar_client is not provided, we will initiate the client using region inferred from aws configurations
+    output = publish_application(template, sar_client)
     print (output)
 ```
 
@@ -63,38 +67,43 @@ There are three possible values for the `actions` field:
 * If application is updated, it shows updated metadata values.
 * If application is updated and new version is created, it shows updated metadata values as well as the new version number.
 
-#### update_application_metadata(template, application_id)
+#### update_application_metadata(template, application_id, sar_client)
 
 Parses the application metadata from the SAM template and only updates the metadata.
 
 For example:
 
 ```python
+import boto3
 from serverlessrepo import update_application_metadata
+
+sar_client = boto3.client('serverlessrepo', region_name='us-east-1')
 
 with open('template.yaml', 'r') as f:
     template = f.read()
     application_id = 'arn:aws:serverlessrepo:us-east-1:123456789012:applications/test-app'
-    update_application_metadata(template, application_id)
+    # if sar_client is not provided, we will initiate the client using region inferred from aws configurations
+    update_application_metadata(template, application_id, sar_client)
 ```
 
 ### Manage Application Permissions
 
-#### make_application_public(application_id)
+#### make_application_public(application_id, sar_client)
 
 Makes an application public so that it's visible to everyone.
 
-#### make_application_private(application_id)
+#### make_application_private(application_id, sar_client)
 
 Makes an application private so that it's only visible to the owner.
 
-#### share_application_with_accounts(application_id, account_ids)
+#### share_application_with_accounts(application_id, account_ids, sar_client)
 
 Shares the application with specified AWS accounts.
 
 #### Examples
 
 ```python
+import boto3
 from serverlessrepo import (
     make_application_public,
     make_application_private,
@@ -102,15 +111,16 @@ from serverlessrepo import (
 )
 
 application_id = 'arn:aws:serverlessrepo:us-east-1:123456789012:applications/test-app'
+sar_client = boto3.client('serverlessrepo', region_name='us-east-1')
 
 # Share an application publicly
-make_application_public(application_id)
+make_application_public(application_id, sar_client)
 
 # Make an application private
-make_application_private(application_id)
+make_application_private(application_id, sar_client)
 
 # Share an application with other AWS accounts
-share_application_with_accounts(application_id, ['123456789013', '123456789014'])
+share_application_with_accounts(application_id, ['123456789013', '123456789014'], sar_client)
 ```
 
 ## Development
