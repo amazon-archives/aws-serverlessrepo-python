@@ -1,5 +1,5 @@
 from unittest import TestCase
-from mock import patch
+from mock import patch, Mock
 from botocore.exceptions import ClientError
 
 from serverlessrepo import publish_application, update_application_metadata
@@ -15,9 +15,11 @@ from serverlessrepo.publish import (
 class TestPublishApplication(TestCase):
 
     def setUp(self):
-        patcher = patch('serverlessrepo.publish.SERVERLESSREPO')
+        patcher = patch('serverlessrepo.publish.boto3')
         self.addCleanup(patcher.stop)
-        self.serverlessrepo_mock = patcher.start()
+        self.boto3_mock = patcher.start()
+        self.serverlessrepo_mock = Mock()
+        self.boto3_mock.client.return_value = self.serverlessrepo_mock
         self.template = """
         {
             "Metadata": {
@@ -193,12 +195,44 @@ class TestPublishApplication(TestCase):
         with self.assertRaises(ClientError):
             publish_application(self.template)
 
+    def test_create_application_with_passed_in_sar_client(self):
+        sar_client = Mock()
+        sar_client.create_application.return_value = {
+            'ApplicationId': self.application_id
+        }
+        publish_application(self.template, sar_client)
 
-class TestPublishApplicationMetadata(TestCase):
+        sar_client.create_application.assert_called_once()
+        sar_client.update_application.assert_not_called()
+        sar_client.create_application_version.assert_not_called()
+
+        # the self initiated boto3 client shouldn't be used
+        self.serverlessrepo_mock.create_application.assert_not_called()
+        self.serverlessrepo_mock.update_application.assert_not_called()
+        self.serverlessrepo_mock.create_application_version.assert_not_called()
+
+    def test_update_application_with_passed_in_sar_client(self):
+        sar_client = Mock()
+        sar_client.create_application.side_effect = self.application_exists_error
+        publish_application(self.template, sar_client)
+
+        sar_client.create_application.assert_called_once()
+        sar_client.update_application.assert_called_once()
+        sar_client.create_application_version.assert_called_once()
+
+        # the self initiated boto3 client shouldn't be used
+        self.serverlessrepo_mock.create_application.assert_not_called()
+        self.serverlessrepo_mock.update_application.assert_not_called()
+        self.serverlessrepo_mock.create_application_version.assert_not_called()
+
+
+class TestUpdateApplicationMetadata(TestCase):
     def setUp(self):
-        patcher = patch('serverlessrepo.publish.SERVERLESSREPO')
+        patcher = patch('serverlessrepo.publish.boto3')
         self.addCleanup(patcher.stop)
-        self.serverlessrepo_mock = patcher.start()
+        self.boto3_mock = patcher.start()
+        self.serverlessrepo_mock = Mock()
+        self.boto3_mock.client.return_value = self.serverlessrepo_mock
         self.template = """
         {
             "Metadata": {
@@ -231,7 +265,7 @@ class TestPublishApplicationMetadata(TestCase):
         self.assertEqual(expected, message)
         self.serverlessrepo_mock.update_application.assert_not_called()
 
-    def test_publish_application_metadata_ignore_irrelevant_fields(self):
+    def test_update_application_metadata_ignore_irrelevant_fields(self):
         update_application_metadata(self.template, self.application_id)
         # SemanticVersion in the template should be ignored
         expected_request = {
@@ -240,3 +274,11 @@ class TestPublishApplicationMetadata(TestCase):
             'Description': 'hello world'
         }
         self.serverlessrepo_mock.update_application.assert_called_once_with(**expected_request)
+
+    def test_update_application_metadata_with_passed_in_sar_client(self):
+        sar_client = Mock()
+        update_application_metadata(self.template, self.application_id, sar_client)
+
+        # the self initiated boto3 client shouldn't be used
+        self.serverlessrepo_mock.update_application.assert_not_called()
+        sar_client.update_application.assert_called_once()

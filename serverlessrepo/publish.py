@@ -6,19 +6,20 @@ from botocore.exceptions import ClientError
 from .application_metadata import ApplicationMetadata
 from .parser import parse_template, get_app_metadata, parse_application_id
 
-SERVERLESSREPO = boto3.client('serverlessrepo')
 CREATE_APPLICATION = 'CREATE_APPLICATION'
 UPDATE_APPLICATION = 'UPDATE_APPLICATION'
 CREATE_APPLICATION_VERSION = 'CREATE_APPLICATION_VERSION'
 
 
-def publish_application(template):
+def publish_application(template, sar_client=None):
     """
     Create a new application or new application version in SAR.
 
     :param template: A packaged YAML or JSON SAM template
     :type template: str
-    :return: Dictionary containing application id and version
+    :param sar_client: The boto3 client used to access SAR
+    :type sar_client: boto3.client
+    :return: Dictionary containing application id, actions taken, and updated details
     :rtype: dict
     :raises ValueError
     """
@@ -27,10 +28,12 @@ def publish_application(template):
 
     template_dict = parse_template(template)
     app_metadata = get_app_metadata(template_dict)
+    if not sar_client:
+        sar_client = boto3.client('serverlessrepo')
 
     try:
         request = _create_application_request(app_metadata, template)
-        response = SERVERLESSREPO.create_application(**request)
+        response = sar_client.create_application(**request)
         application_id = response['ApplicationId']
         actions = [CREATE_APPLICATION]
     except ClientError as e:
@@ -41,14 +44,14 @@ def publish_application(template):
         error_message = e.response['Error']['Message']
         application_id = parse_application_id(error_message)
         request = _update_application_request(app_metadata, application_id)
-        SERVERLESSREPO.update_application(**request)
+        sar_client.update_application(**request)
         actions = [UPDATE_APPLICATION]
 
         # Create application version if semantic version is specified
         if app_metadata.semantic_version:
             try:
                 request = _create_application_version_request(app_metadata, application_id, template)
-                SERVERLESSREPO.create_application_version(**request)
+                sar_client.create_application_version(**request)
                 actions.append(CREATE_APPLICATION_VERSION)
             except ClientError as e:
                 if not _is_conflict_exception(e):
@@ -61,7 +64,7 @@ def publish_application(template):
     }
 
 
-def update_application_metadata(template, application_id):
+def update_application_metadata(template, application_id, sar_client=None):
     """
     Update the application metadata.
 
@@ -69,15 +72,20 @@ def update_application_metadata(template, application_id):
     :type template: str
     :param application_id: The Amazon Resource Name (ARN) of the application
     :type application_id: str
+    :param sar_client: The boto3 client used to access SAR
+    :type sar_client: boto3.client
     :raises ValueError
     """
     if not template or not application_id:
         raise ValueError('Require SAM template and application ID to update application metadata')
 
+    if not sar_client:
+        sar_client = boto3.client('serverlessrepo')
+
     template_dict = parse_template(template)
     app_metadata = get_app_metadata(template_dict)
     request = _update_application_request(app_metadata, application_id)
-    SERVERLESSREPO.update_application(**request)
+    sar_client.update_application(**request)
 
 
 def _create_application_request(app_metadata, template):
