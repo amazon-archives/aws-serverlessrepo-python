@@ -67,6 +67,9 @@ class TestPublishApplication(TestCase):
         self.serverlessrepo_mock.create_application.return_value = {
             'ApplicationId': self.application_id
         }
+        self.serverlessrepo_mock.get_application.return_value = {
+            'Version': {'ApplicationId': self.application_id}
+        }
 
         actual_result = publish_application(self.template)
         app_metadata_template = get_app_metadata(parse_template(self.template)).template_dict
@@ -82,6 +85,30 @@ class TestPublishApplication(TestCase):
         # publish a new application will only call create_application
         self.serverlessrepo_mock.update_application.assert_not_called()
         self.serverlessrepo_mock.create_application_version.assert_not_called()
+
+    @patch('serverlessrepo.publish.time.sleep')
+    def test_publish_new_application_and_version_should_wait_version_created(self, time_mock):
+        self.serverlessrepo_mock.create_application.return_value = {
+            'ApplicationId': self.application_id
+        }
+        self.serverlessrepo_mock.get_application.side_effect = [
+            {}, {'Version': {'ApplicationId': self.application_id}}
+        ]
+        publish_application(self.template)
+
+        self.assertEqual(time_mock.call_count, 2)
+        self.assertEqual(self.serverlessrepo_mock.get_application.call_count, 2)
+
+    @patch('serverlessrepo.publish.time.sleep')
+    def test_publish_new_application_without_version_should_not_wait(self, time_mock):
+        self.serverlessrepo_mock.create_application.return_value = {
+            'ApplicationId': self.application_id
+        }
+        template_without_version = self.template.replace("'SemanticVersion': '1.0.0'", '')
+        publish_application(template_without_version)
+
+        time_mock.assert_not_called()
+        self.serverlessrepo_mock.get_application.assert_not_called()
 
     def test_publish_exception_when_validate_create_application_request(self):
         template_without_app_name = self.template.replace("'Name': 'test-app',", '')

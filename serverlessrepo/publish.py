@@ -1,5 +1,6 @@
 """Module containing functions to publish or update application."""
 
+import time
 import boto3
 from botocore.exceptions import ClientError
 
@@ -36,6 +37,14 @@ def publish_application(template, sar_client=None):
         response = sar_client.create_application(**request)
         application_id = response['ApplicationId']
         actions = [CREATE_APPLICATION]
+
+        if app_metadata.semantic_version:
+            # Make sure version has been created since it's asynchronous
+            for _ in range(3):
+                time.sleep(1)
+                application = sar_client.get_application(ApplicationId=application_id)
+                if application.get('Version', None):
+                    break
     except ClientError as e:
         if not _is_conflict_exception(e):
             raise

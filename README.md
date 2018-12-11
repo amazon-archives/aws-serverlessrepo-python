@@ -20,7 +20,7 @@ import serverlessrepo
 
 ### Publish Applications
 
-#### publish_application(template, sar_client)
+#### publish_application(template, sar_client=None)
 
 Given an [AWS Serverless Application Model (SAM)](https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md) template, it publishes a new application using the specified metadata in AWS Serverless Application Repository. If the application already exists, it updates metadata of the application and publishes a new version if specified in the template.
 
@@ -67,7 +67,7 @@ There are three possible values for the `actions` field:
 * If application is updated, it shows updated metadata values.
 * If application is updated and new version is created, it shows updated metadata values as well as the new version number.
 
-#### update_application_metadata(template, application_id, sar_client)
+#### update_application_metadata(template, application_id, sar_client=None)
 
 Parses the application metadata from the SAM template and only updates the metadata.
 
@@ -88,15 +88,15 @@ with open('template.yaml', 'r') as f:
 
 ### Manage Application Permissions
 
-#### make_application_public(application_id, sar_client)
+#### make_application_public(application_id, sar_client=None)
 
 Makes an application public so that it's visible to everyone.
 
-#### make_application_private(application_id, sar_client)
+#### make_application_private(application_id, sar_client=None)
 
 Makes an application private so that it's only visible to the owner.
 
-#### share_application_with_accounts(application_id, account_ids, sar_client)
+#### share_application_with_accounts(application_id, account_ids, sar_client=None)
 
 Shares the application with specified AWS accounts.
 
