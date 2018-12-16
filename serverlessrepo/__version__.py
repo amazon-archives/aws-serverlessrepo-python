@@ -1,7 +1,7 @@
 """Serverlessrepo version and package meta-data."""
 
 __title__ = 'serverlessrepo'
-__version__ = '0.1.3'
+__version__ = '0.1.4'
 __license__ = 'Apache 2.0'
 __description__ = (
     'A Python library with convenience helpers for working '
