@@ -190,7 +190,7 @@ def _wrap_s3_exception(e):
     error_code = e.response['Error']['Code']
     message = e.response['Error']['Message']
 
-    if error_code == 'BadRequestException' and "Failed to copy S3 object" in message:
+    if error_code == 'BadRequestException' and "Failed to copy S3 object. Access denied:" in message:
         match = re.search('bucket=(.+?), key=(.+?)$', message)
         return S3PermissionsRequired(bucket=match.group(1), key=match.group(2))
 
