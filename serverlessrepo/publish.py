@@ -1,10 +1,12 @@
 """Module containing functions to publish or update application."""
 
+import re
 import boto3
 from botocore.exceptions import ClientError
 
 from .application_metadata import ApplicationMetadata
 from .parser import parse_template, get_app_metadata, parse_application_id
+from .exceptions import S3PermissionsRequired
 
 CREATE_APPLICATION = 'CREATE_APPLICATION'
 UPDATE_APPLICATION = 'UPDATE_APPLICATION'
@@ -38,14 +40,17 @@ def publish_application(template, sar_client=None):
         actions = [CREATE_APPLICATION]
     except ClientError as e:
         if not _is_conflict_exception(e):
-            raise
+            raise _wrap_s3_exception(e)
 
         # Update the application if it already exists
         error_message = e.response['Error']['Message']
         application_id = parse_application_id(error_message)
-        request = _update_application_request(app_metadata, application_id)
-        sar_client.update_application(**request)
-        actions = [UPDATE_APPLICATION]
+        try:
+            request = _update_application_request(app_metadata, application_id)
+            sar_client.update_application(**request)
+            actions = [UPDATE_APPLICATION]
+        except ClientError as e:
+            raise _wrap_s3_exception(e)
 
         # Create application version if semantic version is specified
         if app_metadata.semantic_version:
@@ -55,7 +60,7 @@ def publish_application(template, sar_client=None):
                 actions.append(CREATE_APPLICATION_VERSION)
             except ClientError as e:
                 if not _is_conflict_exception(e):
-                    raise
+                    raise _wrap_s3_exception(e)
 
     return {
         'application_id': application_id,
@@ -172,6 +177,25 @@ def _is_conflict_exception(e):
     """
     error_code = e.response['Error']['Code']
     return error_code == 'ConflictException'
+
+
+def _wrap_s3_exception(e):
+    """
+    Wrap S3 access denied exception with a better error message.
+
+    :param e: boto3 exception
+    :type e: ClientError
+    :return: S3PermissionsRequired if S3 access denied or the original exception
+    """
+    error_code = e.response['Error']['Code']
+    message = e.response['Error']['Message']
+
+    if error_code == 'BadRequestException' and "Failed to copy S3 object. Access denied:" in message:
+        match = re.search('bucket=(.+?), key=(.+?)$', message)
+        if match:
+            return S3PermissionsRequired(bucket=match.group(1), key=match.group(2))
+
+    return e
 
 
 def _get_publish_details(actions, app_metadata_template):

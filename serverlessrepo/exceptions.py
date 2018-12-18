@@ -27,3 +27,13 @@ class InvalidApplicationPolicyError(ServerlessRepoError):
     """Raised when invalid application policy is provided."""
 
     MESSAGE = "Invalid application policy: '{error_message}'"
+
+
+class S3PermissionsRequired(ServerlessRepoError):
+    """Raised when S3 bucket access is denied."""
+
+    MESSAGE = "The AWS Serverless Application Repository does not have read access to bucket '{bucket}', " \
+              "key '{key}'. Please update your Amazon S3 bucket policy to grant the service read " \
+              "permissions to the application artifacts you have uploaded to your S3 bucket. See " \
+              "https://docs.aws.amazon.com/serverlessrepo/latest/devguide/serverless-app-publishing-applications.html" \
+              " for more details."
