@@ -6,7 +6,7 @@ from botocore.exceptions import ClientError
 
 from serverlessrepo import publish_application, update_application_metadata
 from serverlessrepo.exceptions import InvalidApplicationMetadataError, S3PermissionsRequired
-from serverlessrepo.parser import get_app_metadata, strip_app_metadata
+from serverlessrepo.parser import get_app_metadata, strip_app_metadata, yaml_dump
 from serverlessrepo.publish import (
     CREATE_APPLICATION,
     UPDATE_APPLICATION,
@@ -41,7 +41,7 @@ class TestPublishApplication(TestCase):
         }
         """
         self.template_dict = json.loads(self.template)
-        self.yaml_template_without_metadata = strip_app_metadata(self.template_dict)
+        self.yaml_template_without_metadata = yaml_dump(strip_app_metadata(self.template_dict))
         self.application_id = 'arn:aws:serverlessrepo:us-east-1:123456789012:applications/test-app'
         self.application_exists_error = ClientError(
             {

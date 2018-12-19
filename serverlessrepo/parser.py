@@ -105,8 +105,8 @@ def get_app_metadata(template_dict):
     :rtype: ApplicationMetadata
     :raises ApplicationMetadataNotFoundError
     """
-    if METADATA in template_dict and SERVERLESS_REPO_APPLICATION in template_dict[METADATA]:
-        app_metadata_dict = template_dict[METADATA][SERVERLESS_REPO_APPLICATION]
+    if SERVERLESS_REPO_APPLICATION in template_dict.get(METADATA, {}):
+        app_metadata_dict = template_dict.get(METADATA).get(SERVERLESS_REPO_APPLICATION)
         return ApplicationMetadata(app_metadata_dict)
 
     raise ApplicationMetadataNotFoundError(
@@ -135,6 +135,9 @@ def strip_app_metadata(template_dict):
     :return: stripped template content
     :rtype: str
     """
+    if SERVERLESS_REPO_APPLICATION not in template_dict.get(METADATA, {}):
+        return template_dict
+
     template_dict_copy = copy.deepcopy(template_dict)
 
     # strip the whole metadata section if SERVERLESS_REPO_APPLICATION is the only key in it
@@ -143,4 +146,4 @@ def strip_app_metadata(template_dict):
     else:
         template_dict_copy.get(METADATA).pop(SERVERLESS_REPO_APPLICATION, None)
 
-    return yaml_dump(template_dict_copy)
+    return template_dict_copy

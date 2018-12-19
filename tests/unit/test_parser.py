@@ -199,6 +199,11 @@ class TestParser(TestCase):
         result = parser.parse_application_id(text_without_application_id)
         self.assertIsNone(result)
 
+    def test_strip_app_metadata_when_input_does_not_contain_metadata(self):
+        template_dict = {'Resources': {}}
+        actual_output = parser.strip_app_metadata(template_dict)
+        self.assertEqual(actual_output, template_dict)
+
     def test_strip_app_metadata_when_metadata_only_contains_app_metadata(self):
         template_dict = {
             'Metadata': {
@@ -206,9 +211,9 @@ class TestParser(TestCase):
             },
             'Resources': {},
         }
-        expected_output = 'Resources:{}'
+        expected_output = {'Resources': {}}
         actual_output = parser.strip_app_metadata(template_dict)
-        self.assertEqual(re.sub(r'\n|\s', '', actual_output), expected_output)
+        self.assertEqual(actual_output, expected_output)
 
     def test_strip_app_metadata_when_metadata_contains_additional_keys(self):
         template_dict = {
@@ -218,11 +223,11 @@ class TestParser(TestCase):
             },
             'Resources': {}
         }
-        expected_output = """
-        Metadata:
-            AnotherKey: {}
-        Resources: {}
-        """
+        expected_output = {
+            'Metadata': {
+                'AnotherKey': {}
+            },
+            'Resources': {}
+        }
         actual_output = parser.strip_app_metadata(template_dict)
-        self.assertEqual(re.sub(r'\n|\s', '', actual_output),
-                         re.sub(r'\n|\s', '', expected_output))
+        self.assertEqual(actual_output, expected_output)

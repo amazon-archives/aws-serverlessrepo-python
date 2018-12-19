@@ -2,11 +2,15 @@
 
 import re
 import copy
+
 import boto3
 from botocore.exceptions import ClientError
 
 from .application_metadata import ApplicationMetadata
-from .parser import parse_template, get_app_metadata, parse_application_id, strip_app_metadata
+from .parser import (
+    yaml_dump, parse_template, get_app_metadata,
+    parse_application_id, strip_app_metadata
+)
 from .exceptions import S3PermissionsRequired
 
 CREATE_APPLICATION = 'CREATE_APPLICATION'
@@ -34,7 +38,8 @@ def publish_application(template, sar_client=None):
 
     template_dict = _get_template_dict(template)
     app_metadata = get_app_metadata(template_dict)
-    stripped_template = strip_app_metadata(template_dict)
+    stripped_template_dict = strip_app_metadata(template_dict)
+    stripped_template = yaml_dump(stripped_template_dict)
     try:
         request = _create_application_request(app_metadata, stripped_template)
         response = sar_client.create_application(**request)
@@ -107,10 +112,11 @@ def _get_template_dict(template):
     """
     if isinstance(template, str):
         return parse_template(template)
-    elif isinstance(template, dict):
+
+    if isinstance(template, dict):
         return copy.deepcopy(template)
-    else:
-        raise ValueError('Input template should be a string or dictionary')
+
+    raise ValueError('Input template should be a string or dictionary')
 
 
 def _create_application_request(app_metadata, template):
