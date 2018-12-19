@@ -4,7 +4,7 @@ from botocore.exceptions import ClientError
 
 from serverlessrepo import publish_application, update_application_metadata
 from serverlessrepo.exceptions import InvalidApplicationMetadataError, S3PermissionsRequired
-from serverlessrepo.parser import parse_template, get_app_metadata
+from serverlessrepo.parser import parse_template, get_app_metadata, strip_app_metadata
 from serverlessrepo.publish import (
     CREATE_APPLICATION,
     UPDATE_APPLICATION,
@@ -34,9 +34,11 @@ class TestPublishApplication(TestCase):
                     'SourceCodeUrl': 'https://github.com/abc/def',
                     'SemanticVersion': '1.0.0'
                 }
-            }
+            },
+            "Resources": { 'Key1': {}, 'Key2': {} }
         }
         """
+        self.yaml_template_without_metadata = strip_app_metadata(parse_template(self.template))
         self.application_id = 'arn:aws:serverlessrepo:us-east-1:123456789012:applications/test-app'
         self.application_exists_error = ClientError(
             {
@@ -89,7 +91,7 @@ class TestPublishApplication(TestCase):
         }
         self.assertEqual(expected_result, actual_result)
 
-        expected_request = dict({'TemplateBody': self.template}, **app_metadata_template)
+        expected_request = dict({'TemplateBody': self.yaml_template_without_metadata}, **app_metadata_template)
         self.serverlessrepo_mock.create_application.assert_called_once_with(**expected_request)
         # publish a new application will only call create_application
         self.serverlessrepo_mock.update_application.assert_not_called()
@@ -221,7 +223,7 @@ class TestPublishApplication(TestCase):
             'ApplicationId': self.application_id,
             'SourceCodeUrl': 'https://github.com/abc/def',
             'SemanticVersion': '1.0.0',
-            'TemplateBody': self.template
+            'TemplateBody': self.yaml_template_without_metadata
         }
         self.serverlessrepo_mock.create_application_version.assert_called_once_with(**expected_request)
 

@@ -1,4 +1,5 @@
 import re
+from collections import OrderedDict
 from unittest import TestCase
 
 from serverlessrepo.exceptions import ApplicationMetadataNotFoundError
@@ -79,6 +80,34 @@ class TestParser(TestCase):
         output = parser.parse_template(template)
         self.assertEqual(output, {'foo': 'bar'})
 
+    def test_parse_json_preserve_elements_order(self):
+        input_template = """
+        {
+            "B_Resource": {
+                "Key2": {
+                    "Name": "name2"
+                },
+                "Key1": {
+                    "Name": "name1"
+                }
+            },
+            "A_Resource": {
+                "Key2": {
+                    "Name": "name2"
+                },
+                "Key1": {
+                    "Name": "name1"
+                }
+            }
+        }
+        """
+        expected_dict = OrderedDict([
+            ('B_Resource', OrderedDict([('Key2', {'Name': 'name2'}), ('Key1', {'Name': 'name1'})])),
+            ('A_Resource', OrderedDict([('Key2', {'Name': 'name2'}), ('Key1', {'Name': 'name1'})]))
+        ])
+        output_dict = parser.parse_template(input_template)
+        self.assertEqual(expected_dict, output_dict)
+
     def test_parse_yaml_preserve_elements_order(self):
         input_template = """
         B_Resource:
@@ -93,17 +122,12 @@ class TestParser(TestCase):
                 Name: name1
         """
         output_dict = parser.parse_template(input_template)
-        expected_dict = {
-            'B_Resource': {
-                'Key2': {'Name': 'name2'},
-                'Key1': {'Name': 'name1'}
-            },
-            'A_Resource': {
-                'Key2': {'Name': 'name2'},
-                'Key1': {'Name': 'name1'}
-            }
-        }
+        expected_dict = OrderedDict([
+            ('B_Resource', OrderedDict([('Key2', {'Name': 'name2'}), ('Key1', {'Name': 'name1'})])),
+            ('A_Resource', OrderedDict([('Key2', {'Name': 'name2'}), ('Key1', {'Name': 'name1'})]))
+        ])
         self.assertEqual(expected_dict, output_dict)
+
         output_template = parser.yaml_dump(output_dict)
         # yaml dump changes indentation, remove spaces and new line characters to just compare the text
         self.assertEqual(re.sub(r'\n|\s', '', input_template),
@@ -174,3 +198,31 @@ class TestParser(TestCase):
         text_without_application_id = 'text without application id'
         result = parser.parse_application_id(text_without_application_id)
         self.assertIsNone(result)
+
+    def test_strip_app_metadata_when_metadata_only_contains_app_metadata(self):
+        template_dict = {
+            'Metadata': {
+                'AWS::ServerlessRepo::Application': {}
+            },
+            'Resources': {},
+        }
+        expected_output = 'Resources:{}'
+        actual_output = parser.strip_app_metadata(template_dict)
+        self.assertEqual(re.sub(r'\n|\s', '', actual_output), expected_output)
+
+    def test_strip_app_metadata_when_metadata_contains_additional_keys(self):
+        template_dict = {
+            'Metadata': {
+                'AWS::ServerlessRepo::Application': {},
+                'AnotherKey': {}
+            },
+            'Resources': {}
+        }
+        expected_output = """
+        Metadata:
+            AnotherKey: {}
+        Resources: {}
+        """
+        actual_output = parser.strip_app_metadata(template_dict)
+        self.assertEqual(re.sub(r'\n|\s', '', actual_output),
+                         re.sub(r'\n|\s', '', expected_output))

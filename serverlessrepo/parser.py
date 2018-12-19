@@ -1,8 +1,10 @@
 """Helper to parse JSON/YAML SAM template and dump YAML files."""
 
 import re
+import copy
 import json
 from collections import OrderedDict
+
 import six
 import yaml
 from yaml.resolver import ScalarNode, SequenceNode
@@ -86,7 +88,7 @@ def parse_template(template_str):
         # PyYAML doesn't support json as well as it should, so if the input
         # is actually just json it is better to parse it with the standard
         # json parser.
-        return json.loads(template_str)
+        return json.loads(template_str, object_pairs_hook=OrderedDict)
     except ValueError:
         yaml.SafeLoader.add_constructor(yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG, _dict_constructor)
         yaml.SafeLoader.add_multi_constructor('!', intrinsics_multi_constructor)
@@ -122,3 +124,23 @@ def parse_application_id(text):
     """
     result = re.search(APPLICATION_ID_PATTERN, text)
     return result.group(0) if result else None
+
+
+def strip_app_metadata(template_dict):
+    """
+    Strip the "AWS::ServerlessRepo::Application" metadata section from template.
+
+    :param template_dict: SAM template as a dictionary
+    :type template_dict: dict
+    :return: stripped template content
+    :rtype: str
+    """
+    template_dict_copy = copy.deepcopy(template_dict)
+
+    # strip the whole metadata section if SERVERLESS_REPO_APPLICATION is the only key in it
+    if not [k for k in template_dict_copy.get(METADATA) if k != SERVERLESS_REPO_APPLICATION]:
+        template_dict_copy.pop(METADATA, None)
+    else:
+        template_dict_copy.get(METADATA).pop(SERVERLESS_REPO_APPLICATION, None)
+
+    return yaml_dump(template_dict_copy)

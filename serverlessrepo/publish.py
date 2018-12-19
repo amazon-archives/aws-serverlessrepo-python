@@ -5,7 +5,7 @@ import boto3
 from botocore.exceptions import ClientError
 
 from .application_metadata import ApplicationMetadata
-from .parser import parse_template, get_app_metadata, parse_application_id
+from .parser import parse_template, get_app_metadata, parse_application_id, strip_app_metadata
 from .exceptions import S3PermissionsRequired
 
 CREATE_APPLICATION = 'CREATE_APPLICATION'
@@ -33,8 +33,9 @@ def publish_application(template, sar_client=None):
     if not sar_client:
         sar_client = boto3.client('serverlessrepo')
 
+    stripped_template = strip_app_metadata(template_dict)
     try:
-        request = _create_application_request(app_metadata, template)
+        request = _create_application_request(app_metadata, stripped_template)
         response = sar_client.create_application(**request)
         application_id = response['ApplicationId']
         actions = [CREATE_APPLICATION]
@@ -55,7 +56,7 @@ def publish_application(template, sar_client=None):
         # Create application version if semantic version is specified
         if app_metadata.semantic_version:
             try:
-                request = _create_application_version_request(app_metadata, application_id, template)
+                request = _create_application_version_request(app_metadata, application_id, stripped_template)
                 sar_client.create_application_version(**request)
                 actions.append(CREATE_APPLICATION_VERSION)
             except ClientError as e:
