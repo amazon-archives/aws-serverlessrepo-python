@@ -1,6 +1,7 @@
 """Module containing functions to publish or update application."""
 
 import re
+import copy
 import boto3
 from botocore.exceptions import ClientError
 
@@ -17,8 +18,8 @@ def publish_application(template, sar_client=None):
     """
     Create a new application or new application version in SAR.
 
-    :param template: A packaged YAML or JSON SAM template
-    :type template: str
+    :param template: Content of a packaged YAML or JSON SAM template
+    :type template: str_or_dict
     :param sar_client: The boto3 client used to access SAR
     :type sar_client: boto3.client
     :return: Dictionary containing application id, actions taken, and updated details
@@ -28,11 +29,11 @@ def publish_application(template, sar_client=None):
     if not template:
         raise ValueError('Require SAM template to publish the application')
 
-    template_dict = parse_template(template)
-    app_metadata = get_app_metadata(template_dict)
     if not sar_client:
         sar_client = boto3.client('serverlessrepo')
 
+    template_dict = _get_template_dict(template)
+    app_metadata = get_app_metadata(template_dict)
     stripped_template = strip_app_metadata(template_dict)
     try:
         request = _create_application_request(app_metadata, stripped_template)
@@ -74,8 +75,8 @@ def update_application_metadata(template, application_id, sar_client=None):
     """
     Update the application metadata.
 
-    :param template: A packaged YAML or JSON SAM template
-    :type template: str
+    :param template: Content of a packaged YAML or JSON SAM template
+    :type template: str_or_dict
     :param application_id: The Amazon Resource Name (ARN) of the application
     :type application_id: str
     :param sar_client: The boto3 client used to access SAR
@@ -88,10 +89,28 @@ def update_application_metadata(template, application_id, sar_client=None):
     if not sar_client:
         sar_client = boto3.client('serverlessrepo')
 
-    template_dict = parse_template(template)
+    template_dict = _get_template_dict(template)
     app_metadata = get_app_metadata(template_dict)
     request = _update_application_request(app_metadata, application_id)
     sar_client.update_application(**request)
+
+
+def _get_template_dict(template):
+    """
+    Parse string template and or copy dictionary template.
+
+    :param template: Content of a packaged YAML or JSON SAM template
+    :type template: str_or_dict
+    :return: Template as a dictionary
+    :rtype: dict
+    :raises ValueError
+    """
+    if isinstance(template, str):
+        return parse_template(template)
+    elif isinstance(template, dict):
+        return copy.deepcopy(template)
+    else:
+        raise ValueError('Input template should be a string or dictionary')
 
 
 def _create_application_request(app_metadata, template):
