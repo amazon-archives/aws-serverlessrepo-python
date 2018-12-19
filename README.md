@@ -28,6 +28,7 @@ For example:
 
 ```python
 import boto3
+import yaml
 from serverlessrepo import publish_application
 
 sar_client = boto3.client('serverlessrepo', region_name='us-east-1')
@@ -36,7 +37,10 @@ with open('template.yaml', 'r') as f:
     template = f.read()
     # if sar_client is not provided, we will initiate the client using region inferred from aws configurations
     output = publish_application(template, sar_client)
-    print (output)
+
+    # Alternatively, pass parsed template as a dictionary
+    template_dict = yaml.loads(template)
+    output = publish_application(template_dict, sar_client)
 ```
 
 The output of `publish_application` has the following structure:
@@ -75,6 +79,7 @@ For example:
 
 ```python
 import boto3
+import yaml
 from serverlessrepo import update_application_metadata
 
 sar_client = boto3.client('serverlessrepo', region_name='us-east-1')
@@ -84,6 +89,10 @@ with open('template.yaml', 'r') as f:
     application_id = 'arn:aws:serverlessrepo:us-east-1:123456789012:applications/test-app'
     # if sar_client is not provided, we will initiate the client using region inferred from aws configurations
     update_application_metadata(template, application_id, sar_client)
+
+    # Alternatively, pass parsed template as a dictionary
+    template_dict = yaml.loads(template)
+    update_application_metadata(template_dict, application_id, sar_client)
 ```
 
 ### Manage Application Permissions

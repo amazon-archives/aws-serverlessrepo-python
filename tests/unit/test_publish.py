@@ -1,10 +1,12 @@
+import json
 from unittest import TestCase
 from mock import patch, Mock
+
 from botocore.exceptions import ClientError
 
 from serverlessrepo import publish_application, update_application_metadata
 from serverlessrepo.exceptions import InvalidApplicationMetadataError, S3PermissionsRequired
-from serverlessrepo.parser import parse_template, get_app_metadata
+from serverlessrepo.parser import get_app_metadata, strip_app_metadata, yaml_dump
 from serverlessrepo.publish import (
     CREATE_APPLICATION,
     UPDATE_APPLICATION,
@@ -23,20 +25,23 @@ class TestPublishApplication(TestCase):
         self.template = """
         {
             "Metadata": {
-                'AWS::ServerlessRepo::Application': {
-                    'Name': 'test-app',
-                    'Description': 'hello world',
-                    'Author': 'abc',
-                    'LicenseUrl': 's3://test-bucket/LICENSE',
-                    'ReadmeUrl': 's3://test-bucket/README.md',
-                    'Labels': ['test1', 'test2'],
-                    'HomePageUrl': 'https://github.com/abc/def',
-                    'SourceCodeUrl': 'https://github.com/abc/def',
-                    'SemanticVersion': '1.0.0'
+                "AWS::ServerlessRepo::Application": {
+                    "Name": "test-app",
+                    "Description": "hello world",
+                    "Author": "abc",
+                    "LicenseUrl": "s3://test-bucket/LICENSE",
+                    "ReadmeUrl": "s3://test-bucket/README.md",
+                    "Labels": ["test1", "test2"],
+                    "HomePageUrl": "https://github.com/abc/def",
+                    "SourceCodeUrl": "https://github.com/abc/def",
+                    "SemanticVersion": "1.0.0"
                 }
-            }
+            },
+            "Resources": { "Key1": {}, "Key2": {} }
         }
         """
+        self.template_dict = json.loads(self.template)
+        self.yaml_template_without_metadata = yaml_dump(strip_app_metadata(self.template_dict))
         self.application_id = 'arn:aws:serverlessrepo:us-east-1:123456789012:applications/test-app'
         self.application_exists_error = ClientError(
             {
@@ -66,7 +71,7 @@ class TestPublishApplication(TestCase):
             'create_application'
         )
 
-    def test_publish_empty_template(self):
+    def test_publish_raise_value_error_for_empty_template(self):
         with self.assertRaises(ValueError) as context:
             publish_application('')
 
@@ -75,13 +80,40 @@ class TestPublishApplication(TestCase):
         self.assertEqual(expected, message)
         self.serverlessrepo_mock.create_application.assert_not_called()
 
+    def test_publish_raise_value_error_for_not_dict_or_string_template(self):
+        with self.assertRaises(ValueError) as context:
+            publish_application(123)
+
+        message = str(context.exception)
+        expected = 'Input template should be a string or dictionary'
+        self.assertEqual(expected, message)
+        self.serverlessrepo_mock.create_application.assert_not_called()
+
+    @patch('serverlessrepo.publish.parse_template')
+    def test_publish_template_string_should_parse_template(self, parse_template_mock):
+        self.serverlessrepo_mock.create_application.return_value = {
+            'ApplicationId': self.application_id
+        }
+        parse_template_mock.return_value = self.template_dict
+        publish_application(self.template)
+        parse_template_mock.assert_called_with(self.template)
+
+    @patch('serverlessrepo.publish.copy.deepcopy')
+    def test_publish_template_dict_should_copy_template(self, copy_mock):
+        self.serverlessrepo_mock.create_application.return_value = {
+            'ApplicationId': self.application_id
+        }
+        copy_mock.return_value = self.template_dict
+        publish_application(self.template_dict)
+        copy_mock.assert_called_with(self.template_dict)
+
     def test_publish_new_application_should_create_application(self):
         self.serverlessrepo_mock.create_application.return_value = {
             'ApplicationId': self.application_id
         }
 
         actual_result = publish_application(self.template)
-        app_metadata_template = get_app_metadata(parse_template(self.template)).template_dict
+        app_metadata_template = get_app_metadata(self.template_dict).template_dict
         expected_result = {
             'application_id': self.application_id,
             'actions': [CREATE_APPLICATION],
@@ -89,14 +121,14 @@ class TestPublishApplication(TestCase):
         }
         self.assertEqual(expected_result, actual_result)
 
-        expected_request = dict({'TemplateBody': self.template}, **app_metadata_template)
+        expected_request = dict({'TemplateBody': self.yaml_template_without_metadata}, **app_metadata_template)
         self.serverlessrepo_mock.create_application.assert_called_once_with(**expected_request)
         # publish a new application will only call create_application
         self.serverlessrepo_mock.update_application.assert_not_called()
         self.serverlessrepo_mock.create_application_version.assert_not_called()
 
-    def test_publish_exception_when_validate_create_application_request(self):
-        template_without_app_name = self.template.replace("'Name': 'test-app',", '')
+    def test_publish_raise_metadata_error_for_invalid_create_application_request(self):
+        template_without_app_name = self.template.replace('"Name": "test-app",', '')
         with self.assertRaises(InvalidApplicationMetadataError) as context:
             publish_application(template_without_app_name)
 
@@ -131,7 +163,7 @@ class TestPublishApplication(TestCase):
 
     def test_publish_existing_application_should_update_application_if_version_not_specified(self):
         self.serverlessrepo_mock.create_application.side_effect = self.application_exists_error
-        template_without_version = self.template.replace("'SemanticVersion': '1.0.0'", '')
+        template_without_version = self.template.replace('"SemanticVersion": "1.0.0"', '')
 
         actual_result = publish_application(template_without_version)
         expected_result = {
@@ -221,7 +253,7 @@ class TestPublishApplication(TestCase):
             'ApplicationId': self.application_id,
             'SourceCodeUrl': 'https://github.com/abc/def',
             'SemanticVersion': '1.0.0',
-            'TemplateBody': self.template
+            'TemplateBody': self.yaml_template_without_metadata
         }
         self.serverlessrepo_mock.create_application_version.assert_called_once_with(**expected_request)
 
@@ -284,18 +316,19 @@ class TestUpdateApplicationMetadata(TestCase):
         self.template = """
         {
             "Metadata": {
-                'AWS::ServerlessRepo::Application': {
-                    'Name': 'test-app',
-                    'Description': 'hello world',
-                    'Author': 'abc',
-                    'SemanticVersion': '1.0.0'
+                "AWS::ServerlessRepo::Application": {
+                    "Name": "test-app",
+                    "Description": "hello world",
+                    "Author": "abc",
+                    "SemanticVersion": "1.0.0"
                 }
             }
         }
         """
+        self.template_dict = json.loads(self.template)
         self.application_id = 'arn:aws:serverlessrepo:us-east-1:123456789012:applications/test-app'
 
-    def test_empty_template_throw_exception(self):
+    def test_raise_value_error_for_empty_template(self):
         with self.assertRaises(ValueError) as context:
             update_application_metadata('', self.application_id)
 
@@ -304,7 +337,7 @@ class TestUpdateApplicationMetadata(TestCase):
         self.assertEqual(expected, message)
         self.serverlessrepo_mock.update_application.assert_not_called()
 
-    def test_empty_application_id_throw_exception(self):
+    def test_raise_value_error_for_empty_application_id(self):
         with self.assertRaises(ValueError) as context:
             update_application_metadata(self.template, '')
 
@@ -312,6 +345,27 @@ class TestUpdateApplicationMetadata(TestCase):
         expected = 'Require SAM template and application ID to update application metadata'
         self.assertEqual(expected, message)
         self.serverlessrepo_mock.update_application.assert_not_called()
+
+    def test_raise_value_error_for_not_dict_or_string_template(self):
+        with self.assertRaises(ValueError) as context:
+            update_application_metadata(123, self.application_id)
+
+        message = str(context.exception)
+        expected = 'Input template should be a string or dictionary'
+        self.assertEqual(expected, message)
+        self.serverlessrepo_mock.update_application.assert_not_called()
+
+    @patch('serverlessrepo.publish.parse_template')
+    def test_update_application_metadata_with_template_string_should_parse_template(self, parse_template_mock):
+        parse_template_mock.return_value = self.template_dict
+        update_application_metadata(self.template, self.application_id)
+        parse_template_mock.assert_called_with(self.template)
+
+    @patch('serverlessrepo.publish.copy.deepcopy')
+    def test_publish_template_dict_should_copy_template(self, copy_mock):
+        copy_mock.return_value = self.template_dict
+        update_application_metadata(self.template_dict, self.application_id)
+        copy_mock.assert_called_with(self.template_dict)
 
     def test_update_application_metadata_ignore_irrelevant_fields(self):
         update_application_metadata(self.template, self.application_id)
