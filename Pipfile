@@ -13,4 +13,4 @@ mock = "*"
 tox = "*"
 
 [packages]
-serverlessrepo = {path = ".",extras = ["dev"],editable = true}
+serverlessrepo = {editable = true,extras = ["dev"],path = "."}
