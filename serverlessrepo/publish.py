@@ -11,7 +11,7 @@ from .parser import (
     yaml_dump, parse_template, get_app_metadata,
     parse_application_id, strip_app_metadata
 )
-from .exceptions import ServerlessRepoClientError, S3PermissionsRequired
+from .exceptions import ServerlessRepoClientError, S3PermissionsRequired, InvalidS3UriError
 
 CREATE_APPLICATION = 'CREATE_APPLICATION'
 UPDATE_APPLICATION = 'UPDATE_APPLICATION'
@@ -211,15 +211,18 @@ def _wrap_client_error(e):
 
     :param e: botocore exception
     :type e: ClientError
-    :return: S3PermissionsRequired or ServerlessRepoClientError
+    :return: S3PermissionsRequired or InvalidS3UriError or ServerlessRepoClientError
     """
     error_code = e.response['Error']['Code']
     message = e.response['Error']['Message']
 
-    if error_code == 'BadRequestException' and "Failed to copy S3 object. Access denied:" in message:
-        match = re.search('bucket=(.+?), key=(.+?)$', message)
-        if match:
-            return S3PermissionsRequired(bucket=match.group(1), key=match.group(2))
+    if error_code == 'BadRequestException':
+        if "Failed to copy S3 object. Access denied:" in message:
+            match = re.search('bucket=(.+?), key=(.+?)$', message)
+            if match:
+                return S3PermissionsRequired(bucket=match.group(1), key=match.group(2))
+        if "Invalid S3 URI" in message:
+            return InvalidS3UriError()
 
     return ServerlessRepoClientError(message=message)
 

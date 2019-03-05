@@ -39,6 +39,14 @@ class S3PermissionsRequired(ServerlessRepoError):
               " for more details."
 
 
+class InvalidS3UriError(ServerlessRepoError):
+    """Raised when the template contains invalid S3 URIs."""
+
+    MESSAGE = "Your SAM template contains invalid S3 URIs. Please make sure that you have uploaded application " \
+              "artifacts to S3 by packaging the template. See more details in " \
+              "https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/sam-cli-command-reference-sam-package.html"  # noqa: E501 # pylint: disable=line-too-long
+
+
 class ServerlessRepoClientError(ServerlessRepoError):
     """Wrapper for botocore ClientError."""
 

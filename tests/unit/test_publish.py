@@ -8,6 +8,7 @@ from serverlessrepo import publish_application, update_application_metadata
 from serverlessrepo.exceptions import (
     InvalidApplicationMetadataError,
     S3PermissionsRequired,
+    InvalidS3UriError,
     ServerlessRepoClientError
 )
 from serverlessrepo.parser import get_app_metadata, strip_app_metadata, yaml_dump
@@ -70,6 +71,15 @@ class TestPublishApplication(TestCase):
                 'Error': {
                     'Code': 'BadRequestException',
                     'Message': 'Failed to copy S3 object. Access denied: bucket=test-bucket, key=test-file'
+                }
+            },
+            'create_application'
+        )
+        self.invalid_s3_uri_exception = ClientError(
+            {
+                'Error': {
+                    'Code': 'BadRequestException',
+                    'Message': 'Invalid S3 URI'
                 }
             },
             'create_application'
@@ -141,7 +151,7 @@ class TestPublishApplication(TestCase):
         # create_application shouldn't be called if application metadata is invalid
         self.serverlessrepo_mock.create_application.assert_not_called()
 
-    def test_publish_raise_serverlessrepo_error_when_create_application(self):
+    def test_publish_raise_serverlessrepo_client_error_when_create_application(self):
         self.serverlessrepo_mock.create_application.side_effect = self.not_conflict_exception
 
         # should raise exception if it's not ConflictException
@@ -152,7 +162,7 @@ class TestPublishApplication(TestCase):
         self.serverlessrepo_mock.update_application.assert_not_called()
         self.serverlessrepo_mock.create_application_version.assert_not_called()
 
-    def test_publish_raise_s3_error_when_create_application(self):
+    def test_publish_raise_s3_permission_error_when_create_application(self):
         self.serverlessrepo_mock.create_application.side_effect = self.s3_denied_exception
         with self.assertRaises(S3PermissionsRequired) as context:
             publish_application(self.template)
@@ -161,9 +171,13 @@ class TestPublishApplication(TestCase):
         self.assertIn("The AWS Serverless Application Repository does not have read access to bucket "
                       "'test-bucket', key 'test-file'.", message)
 
-        # shouldn't call the following APIs if the exception isn't application already exists
-        self.serverlessrepo_mock.update_application.assert_not_called()
-        self.serverlessrepo_mock.create_application_version.assert_not_called()
+    def test_publish_raise_invalid_s3_uri_when_create_application(self):
+        self.serverlessrepo_mock.create_application.side_effect = self.invalid_s3_uri_exception
+        with self.assertRaises(InvalidS3UriError) as context:
+            publish_application(self.template)
+
+        message = str(context.exception)
+        self.assertIn("Your SAM template contains invalid S3 URIs.", message)
 
     def test_publish_existing_application_should_update_application_if_version_not_specified(self):
         self.serverlessrepo_mock.create_application.side_effect = self.application_exists_error
@@ -191,15 +205,13 @@ class TestPublishApplication(TestCase):
         # create_application_version shouldn't be called if version is not provided
         self.serverlessrepo_mock.create_application_version.assert_not_called()
 
-    def test_publish_raise_s3_error_when_update_application(self):
+    @patch('serverlessrepo.publish._wrap_client_error')
+    def test_publish_wrap_client_error_when_update_application(self, wrap_client_error_mock):
         self.serverlessrepo_mock.create_application.side_effect = self.application_exists_error
-        self.serverlessrepo_mock.update_application.side_effect = self.s3_denied_exception
-        with self.assertRaises(S3PermissionsRequired) as context:
+        self.serverlessrepo_mock.update_application.side_effect = self.not_conflict_exception
+        wrap_client_error_mock.return_value = ServerlessRepoClientError(message="client error")
+        with self.assertRaises(ServerlessRepoClientError):
             publish_application(self.template)
-
-        message = str(context.exception)
-        self.assertIn("The AWS Serverless Application Repository does not have read access to bucket "
-                      "'test-bucket', key 'test-file'.", message)
 
         # create_application_version shouldn't be called if update_application fails
         self.serverlessrepo_mock.create_application_version.assert_not_called()
@@ -261,23 +273,13 @@ class TestPublishApplication(TestCase):
         }
         self.serverlessrepo_mock.create_application_version.assert_called_once_with(**expected_request)
 
-    def test_publish_raise_serverlessrepo_error_when_create_application_version(self):
+    @patch('serverlessrepo.publish._wrap_client_error')
+    def test_publish_wrap_client_error_when_create_application_version(self, wrap_client_error_mock):
         self.serverlessrepo_mock.create_application.side_effect = self.application_exists_error
         self.serverlessrepo_mock.create_application_version.side_effect = self.not_conflict_exception
-
-        # should raise exception if it's not ConflictException
+        wrap_client_error_mock.return_value = ServerlessRepoClientError(message="client error")
         with self.assertRaises(ServerlessRepoClientError):
             publish_application(self.template)
-
-    def test_publish_raise_s3_error_when_create_application_version(self):
-        self.serverlessrepo_mock.create_application.side_effect = self.application_exists_error
-        self.serverlessrepo_mock.create_application_version.side_effect = self.s3_denied_exception
-        with self.assertRaises(S3PermissionsRequired) as context:
-            publish_application(self.template)
-
-        message = str(context.exception)
-        self.assertIn("The AWS Serverless Application Repository does not have read access to bucket "
-                      "'test-bucket', key 'test-file'.", message)
 
     def test_create_application_with_passed_in_sar_client(self):
         sar_client = Mock()
