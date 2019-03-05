@@ -211,7 +211,7 @@ def _wrap_client_error(e):
 
     :param e: botocore exception
     :type e: ClientError
-    :return: S3PermissionsRequired or InvalidS3UriError or ServerlessRepoClientError
+    :return: S3PermissionsRequired or InvalidS3UriError or general ServerlessRepoClientError
     """
     error_code = e.response['Error']['Code']
     message = e.response['Error']['Message']
@@ -222,7 +222,7 @@ def _wrap_client_error(e):
             if match:
                 return S3PermissionsRequired(bucket=match.group(1), key=match.group(2))
         if "Invalid S3 URI" in message:
-            return InvalidS3UriError()
+            return InvalidS3UriError(message=message)
 
     return ServerlessRepoClientError(message=message)
 

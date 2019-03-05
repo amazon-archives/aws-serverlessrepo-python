@@ -177,7 +177,7 @@ class TestPublishApplication(TestCase):
             publish_application(self.template)
 
         message = str(context.exception)
-        self.assertIn("Your SAM template contains invalid S3 URIs.", message)
+        self.assertIn("Invalid S3 URI", message)
 
     def test_publish_existing_application_should_update_application_if_version_not_specified(self):
         self.serverlessrepo_mock.create_application.side_effect = self.application_exists_error
