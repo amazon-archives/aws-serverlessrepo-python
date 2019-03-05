@@ -5,7 +5,11 @@ from mock import patch, Mock
 from botocore.exceptions import ClientError
 
 from serverlessrepo import publish_application, update_application_metadata
-from serverlessrepo.exceptions import InvalidApplicationMetadataError, S3PermissionsRequired
+from serverlessrepo.exceptions import (
+    InvalidApplicationMetadataError,
+    S3PermissionsRequired,
+    ServerlessRepoClientError
+)
 from serverlessrepo.parser import get_app_metadata, strip_app_metadata, yaml_dump
 from serverlessrepo.publish import (
     CREATE_APPLICATION,
@@ -137,11 +141,11 @@ class TestPublishApplication(TestCase):
         # create_application shouldn't be called if application metadata is invalid
         self.serverlessrepo_mock.create_application.assert_not_called()
 
-    def test_publish_raise_client_error_when_create_application(self):
+    def test_publish_raise_serverlessrepo_error_when_create_application(self):
         self.serverlessrepo_mock.create_application.side_effect = self.not_conflict_exception
 
         # should raise exception if it's not ConflictException
-        with self.assertRaises(ClientError):
+        with self.assertRaises(ServerlessRepoClientError):
             publish_application(self.template)
 
         # shouldn't call the following APIs if the exception isn't application already exists
@@ -203,7 +207,7 @@ class TestPublishApplication(TestCase):
     def test_publish_existing_application_should_update_application_if_version_exists(self):
         self.serverlessrepo_mock.create_application.side_effect = self.application_exists_error
         self.serverlessrepo_mock.create_application_version.side_effect = ClientError(
-            {'Error': {'Code': 'ConflictException'}},
+            {'Error': {'Code': 'ConflictException', 'Message': 'Random'}},
             'create_application_version'
         )
 
@@ -257,12 +261,12 @@ class TestPublishApplication(TestCase):
         }
         self.serverlessrepo_mock.create_application_version.assert_called_once_with(**expected_request)
 
-    def test_publish_raise_client_error_when_create_application_version(self):
+    def test_publish_raise_serverlessrepo_error_when_create_application_version(self):
         self.serverlessrepo_mock.create_application.side_effect = self.application_exists_error
         self.serverlessrepo_mock.create_application_version.side_effect = self.not_conflict_exception
 
         # should raise exception if it's not ConflictException
-        with self.assertRaises(ClientError):
+        with self.assertRaises(ServerlessRepoClientError):
             publish_application(self.template)
 
     def test_publish_raise_s3_error_when_create_application_version(self):

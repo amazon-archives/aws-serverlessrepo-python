@@ -37,3 +37,9 @@ class S3PermissionsRequired(ServerlessRepoError):
               "permissions to the application artifacts you have uploaded to your S3 bucket. See " \
               "https://docs.aws.amazon.com/serverlessrepo/latest/devguide/serverless-app-publishing-applications.html" \
               " for more details."
+
+
+class ServerlessRepoClientError(ServerlessRepoError):
+    """Wrapper for botocore ClientError."""
+
+    MESSAGE = "{message}"
