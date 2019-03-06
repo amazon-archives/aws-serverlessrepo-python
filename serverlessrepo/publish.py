@@ -11,7 +11,7 @@ from .parser import (
     yaml_dump, parse_template, get_app_metadata,
     parse_application_id, strip_app_metadata
 )
-from .exceptions import S3PermissionsRequired
+from .exceptions import ServerlessRepoClientError, S3PermissionsRequired, InvalidS3UriError
 
 CREATE_APPLICATION = 'CREATE_APPLICATION'
 UPDATE_APPLICATION = 'UPDATE_APPLICATION'
@@ -47,7 +47,7 @@ def publish_application(template, sar_client=None):
         actions = [CREATE_APPLICATION]
     except ClientError as e:
         if not _is_conflict_exception(e):
-            raise _wrap_s3_exception(e)
+            raise _wrap_client_error(e)
 
         # Update the application if it already exists
         error_message = e.response['Error']['Message']
@@ -57,7 +57,7 @@ def publish_application(template, sar_client=None):
             sar_client.update_application(**request)
             actions = [UPDATE_APPLICATION]
         except ClientError as e:
-            raise _wrap_s3_exception(e)
+            raise _wrap_client_error(e)
 
         # Create application version if semantic version is specified
         if app_metadata.semantic_version:
@@ -67,7 +67,7 @@ def publish_application(template, sar_client=None):
                 actions.append(CREATE_APPLICATION_VERSION)
             except ClientError as e:
                 if not _is_conflict_exception(e):
-                    raise _wrap_s3_exception(e)
+                    raise _wrap_client_error(e)
 
     return {
         'application_id': application_id,
@@ -195,9 +195,9 @@ def _create_application_version_request(app_metadata, application_id, template):
 
 def _is_conflict_exception(e):
     """
-    Check whether the boto3 ClientError is ConflictException.
+    Check whether the botocore ClientError is ConflictException.
 
-    :param e: boto3 exception
+    :param e: botocore exception
     :type e: ClientError
     :return: True if e is ConflictException
     """
@@ -205,23 +205,26 @@ def _is_conflict_exception(e):
     return error_code == 'ConflictException'
 
 
-def _wrap_s3_exception(e):
+def _wrap_client_error(e):
     """
-    Wrap S3 access denied exception with a better error message.
+    Wrap botocore ClientError exception into ServerlessRepoClientError.
 
-    :param e: boto3 exception
+    :param e: botocore exception
     :type e: ClientError
-    :return: S3PermissionsRequired if S3 access denied or the original exception
+    :return: S3PermissionsRequired or InvalidS3UriError or general ServerlessRepoClientError
     """
     error_code = e.response['Error']['Code']
     message = e.response['Error']['Message']
 
-    if error_code == 'BadRequestException' and "Failed to copy S3 object. Access denied:" in message:
-        match = re.search('bucket=(.+?), key=(.+?)$', message)
-        if match:
-            return S3PermissionsRequired(bucket=match.group(1), key=match.group(2))
+    if error_code == 'BadRequestException':
+        if "Failed to copy S3 object. Access denied:" in message:
+            match = re.search('bucket=(.+?), key=(.+?)$', message)
+            if match:
+                return S3PermissionsRequired(bucket=match.group(1), key=match.group(2))
+        if "Invalid S3 URI" in message:
+            return InvalidS3UriError(message=message)
 
-    return e
+    return ServerlessRepoClientError(message=message)
 
 
 def _get_publish_details(actions, app_metadata_template):
