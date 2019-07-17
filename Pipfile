@@ -11,6 +11,7 @@ mock = "*"
 "flake8" = "*"
 "flake8-docstrings" = "*"
 tox = "*"
+pydocstyle = "==3.0.0"
 
 [packages]
 serverlessrepo = {editable = true,extras = ["dev"],path = "."}
