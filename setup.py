@@ -11,18 +11,6 @@ REQUIRED = [
     'six~=1.11'
 ]
 
-# Optional packages for this module to work
-EXTRAS = {
-    'dev': [
-        'pytest',
-        'pytest-cov',
-        'pylint',
-        'mock',
-        'flake8',
-        'flake8-docstrings'
-    ]
-}
-
 here = path.abspath(path.dirname(__file__))
 
 # Get the long description from the README file
@@ -50,7 +38,6 @@ setup(
         '>=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*'
     ),
     install_requires=REQUIRED,
-    extras_require=EXTRAS,
     classifiers=[
         'Development Status :: 4 - Beta',
         'Environment :: Console',

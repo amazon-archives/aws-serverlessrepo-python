@@ -4,6 +4,7 @@ verify_ssl = true
 name = "pypi"
 
 [dev-packages]
+pydocstyle = "<4"
 pytest = "*"
 pytest-cov = "*"
 pylint = "*"
@@ -11,7 +12,6 @@ mock = "*"
 "flake8" = "*"
 "flake8-docstrings" = "*"
 tox = "*"
-pydocstyle = "==3.0.0"
 
 [packages]
-serverlessrepo = {editable = true,extras = ["dev"],path = "."}
+serverlessrepo = {editable = true,path = "."}
