@@ -9,8 +9,7 @@ pytest-cov = "*"
 pylint = "*"
 mock = "*"
 "flake8" = "*"
-"flake8-docstrings" = "*"
 tox = "*"
 
 [packages]
-serverlessrepo = {editable = true,extras = ["dev"],path = "."}
+serverlessrepo = {editable = true,path = "."}

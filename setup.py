@@ -6,22 +6,10 @@ from setuptools import setup, find_packages
 
 # Required packages for this module to work
 REQUIRED = [
-    'pyyaml~=3.12',
+    'pyyaml~=5.1',
     'boto3~=1.9, >=1.9.56',
     'six~=1.11'
 ]
-
-# Optional packages for this module to work
-EXTRAS = {
-    'dev': [
-        'pytest',
-        'pytest-cov',
-        'pylint',
-        'mock',
-        'flake8',
-        'flake8-docstrings'
-    ]
-}
 
 here = path.abspath(path.dirname(__file__))
 
@@ -50,7 +38,6 @@ setup(
         '>=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*'
     ),
     install_requires=REQUIRED,
-    extras_require=EXTRAS,
     classifiers=[
         'Development Status :: 4 - Beta',
         'Environment :: Console',
