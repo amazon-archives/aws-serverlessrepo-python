@@ -4,13 +4,11 @@ verify_ssl = true
 name = "pypi"
 
 [dev-packages]
-pydocstyle = "<4"
 pytest = "*"
 pytest-cov = "*"
 pylint = "*"
 mock = "*"
 "flake8" = "*"
-"flake8-docstrings" = "*"
 tox = "*"
 
 [packages]
