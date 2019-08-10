@@ -142,7 +142,7 @@ share_application_with_accounts(application_id, ['123456789013', '123456789014']
   * Pipenv will automatically update [Pipfile](./Pipfile) and [Pipfile.lock](./Pipfile.lock) for you.
   * Add new dependencies to [setup.py](./setup.py) install_requires if they are needed for consumers of this library.
 * Verify that everything works: `make build`
-  * You can run `make tests` separately to verify that tests pass.
+  * You can run `make test` separately to verify that tests pass.
   * Check code style with `make flake` and `make lint`.
 * Make code changes, run all verifications again before sending a Pull Request: `make pr`
 
