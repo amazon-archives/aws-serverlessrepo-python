@@ -14,7 +14,7 @@ class ServerlessRepoError(Exception):
 class InvalidApplicationMetadataError(ServerlessRepoError):
     """Raised when invalid application metadata is provided."""
 
-    MESSAGE = "Required application metadata properties not provided: '{properties}'"
+    MESSAGE = "Invalid application metadata: '{error_message}'"
 
 
 class ApplicationMetadataNotFoundError(ServerlessRepoError):

@@ -147,7 +147,7 @@ class TestPublishApplication(TestCase):
             publish_application(template_without_app_name)
 
         message = str(context.exception)
-        self.assertEqual("Required application metadata properties not provided: 'name'", message)
+        self.assertEqual("Invalid application metadata: 'name properties not provided'", message)
         # create_application shouldn't be called if application metadata is invalid
         self.serverlessrepo_mock.create_application.assert_not_called()
 

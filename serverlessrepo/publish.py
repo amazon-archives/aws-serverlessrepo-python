@@ -136,8 +136,10 @@ def _create_application_request(app_metadata, template):
         'Description': app_metadata.description,
         'HomePageUrl': app_metadata.home_page_url,
         'Labels': app_metadata.labels,
+        'LicenseBody': app_metadata.license_body,
         'LicenseUrl': app_metadata.license_url,
         'Name': app_metadata.name,
+        'ReadmeBody': app_metadata.readme_body,
         'ReadmeUrl': app_metadata.readme_url,
         'SemanticVersion': app_metadata.semantic_version,
         'SourceCodeUrl': app_metadata.source_code_url,
@@ -165,6 +167,7 @@ def _update_application_request(app_metadata, application_id):
         'Description': app_metadata.description,
         'HomePageUrl': app_metadata.home_page_url,
         'Labels': app_metadata.labels,
+        'ReadmeBody': app_metadata.readme_body,
         'ReadmeUrl': app_metadata.readme_url
     }
     return {k: v for k, v in request.items() if v}

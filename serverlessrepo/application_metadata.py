@@ -11,7 +11,9 @@ class ApplicationMetadata(object):
     DESCRIPTION = 'Description'
     AUTHOR = 'Author'
     SPDX_LICENSE_ID = 'SpdxLicenseId'
+    LICENSE_BODY = 'LicenseBody'
     LICENSE_URL = 'LicenseUrl'
+    README_BODY = 'ReadmeBody'
     README_URL = 'ReadmeUrl'
     LABELS = 'Labels'
     HOME_PAGE_URL = 'HomePageUrl'
@@ -30,7 +32,9 @@ class ApplicationMetadata(object):
         self.description = app_metadata.get(self.DESCRIPTION)
         self.author = app_metadata.get(self.AUTHOR)
         self.spdx_license_id = app_metadata.get(self.SPDX_LICENSE_ID)
+        self.license_body = app_metadata.get(self.LICENSE_BODY)
         self.license_url = app_metadata.get(self.LICENSE_URL)
+        self.readme_body = app_metadata.get(self.README_BODY)
         self.readme_url = app_metadata.get(self.README_URL)
         self.labels = app_metadata.get(self.LABELS)
         self.home_page_url = app_metadata.get(self.HOME_PAGE_URL)
@@ -52,6 +56,13 @@ class ApplicationMetadata(object):
         """
         missing_props = [p for p in required_props if not getattr(self, p)]
         if missing_props:
-            missing_props_str = ', '.join(sorted(missing_props))
-            raise InvalidApplicationMetadataError(properties=missing_props_str)
+            raise InvalidApplicationMetadataError(
+                error_message='{} properties not provided'.format(', '.join(sorted(missing_props))))
+
+        if self.license_body and self.license_url:
+            raise InvalidApplicationMetadataError(error_message='provide either LicenseBody or LicenseUrl')
+
+        if self.readme_body and self.readme_url:
+            raise InvalidApplicationMetadataError(error_message='provide either ReadmeBody or ReadmeUrl')
+
         return True
