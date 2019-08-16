@@ -311,6 +311,49 @@ class TestPublishApplication(TestCase):
         self.serverlessrepo_mock.update_application.assert_not_called()
         self.serverlessrepo_mock.create_application_version.assert_not_called()
 
+    def test_create_application_with_licensebody(self):
+        self.serverlessrepo_mock.create_application.return_value = {
+            'ApplicationId': self.application_id
+        }
+        template_with_licensebody = self.template \
+            .replace('"LicenseUrl": "s3://test-bucket/LICENSE"', '"LicenseBody": "test test"')
+        actual_result = publish_application(template_with_licensebody)
+        expected_result = {
+            'application_id': self.application_id,
+            'actions': [CREATE_APPLICATION],
+            'details': {
+                'Author': 'abc',
+                'Description': 'hello world',
+                'HomePageUrl': 'https://github.com/abc/def',
+                'Labels': ['test1', 'test2'],
+                'LicenseBody': 'test test',
+                'Name': 'test-app',
+                'ReadmeUrl': 's3://test-bucket/README.md',
+                'SemanticVersion': '1.0.0',
+                'SourceCodeUrl': 'https://github.com/abc/def'
+            }
+        }
+        self.assertEqual(expected_result, actual_result)
+
+    def test_update_application_with_readmebody(self):
+        self.serverlessrepo_mock.create_application.side_effect = self.application_exists_error
+        template_with_readmebody = self.template \
+            .replace('"SemanticVersion": "1.0.0"', '') \
+            .replace('"ReadmeUrl": "s3://test-bucket/README.md"', '"ReadmeBody": "test test"')
+        actual_result = publish_application(template_with_readmebody)
+        expected_result = {
+            'application_id': self.application_id,
+            'actions': [UPDATE_APPLICATION],
+            'details': {
+                'Description': 'hello world',
+                'Author': 'abc',
+                'ReadmeBody': 'test test',
+                'Labels': ['test1', 'test2'],
+                'HomePageUrl': 'https://github.com/abc/def'
+            }
+        }
+        self.assertEqual(expected_result, actual_result)
+
 
 class TestUpdateApplicationMetadata(TestCase):
     def setUp(self):
