@@ -249,7 +249,8 @@ def _get_publish_details(actions, app_metadata_template):
         ApplicationMetadata.DESCRIPTION,
         ApplicationMetadata.HOME_PAGE_URL,
         ApplicationMetadata.LABELS,
-        ApplicationMetadata.README_URL
+        ApplicationMetadata.README_URL,
+        ApplicationMetadata.README_BODY
     ]
 
     if CREATE_APPLICATION_VERSION in actions:
