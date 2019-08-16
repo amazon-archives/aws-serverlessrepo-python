@@ -335,7 +335,7 @@ class TestPublishApplication(TestCase):
         }
         self.assertEqual(expected_result, actual_result)
 
-     def test_update_application_with_readmebody(self):
+    def test_update_application_with_readmebody(self):
         self.serverlessrepo_mock.create_application.side_effect = self.application_exists_error
         template_with_readmebody = self.template \
             .replace('"SemanticVersion": "1.0.0"', '') \
