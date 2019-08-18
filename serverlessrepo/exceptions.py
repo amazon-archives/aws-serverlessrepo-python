@@ -45,6 +45,14 @@ class InvalidS3UriError(ServerlessRepoError):
     MESSAGE = "{message}"
 
 
+class UnsupportedResourceTypesError(ServerlessRepoError):
+    """Raised when the template contains unsupported resource types."""
+
+    MESSAGE = "Template contains unsupported resource types: '{resource_types}'. See " \
+              "https://docs.aws.amazon.com/serverlessrepo/latest/devguide/list-supported-resources.html " \
+              "for a full list of supported resources."
+
+
 class ServerlessRepoClientError(ServerlessRepoError):
     """Wrapper for botocore ClientError."""
 
