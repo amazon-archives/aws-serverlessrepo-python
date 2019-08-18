@@ -9,8 +9,8 @@ from serverlessrepo.exceptions import (
     InvalidApplicationMetadataError,
     S3PermissionsRequired,
     InvalidS3UriError,
-    ServerlessRepoClientError
-)
+    ServerlessRepoClientError,
+    UnsupportedResourceTypesError)
 from serverlessrepo.parser import get_app_metadata, strip_app_metadata, yaml_dump
 from serverlessrepo.publish import (
     CREATE_APPLICATION,
@@ -80,6 +80,15 @@ class TestPublishApplication(TestCase):
                 'Error': {
                     'Code': 'BadRequestException',
                     'Message': 'Invalid S3 URI'
+                }
+            },
+            'create_application'
+        )
+        self.unsupported_resource_types_exception = ClientError(
+            {
+                'Error': {
+                    'Code': 'BadRequestException',
+                    'Message': 'The template contains unsupported resource types. [AWS::XXX::XXX]'
                 }
             },
             'create_application'
@@ -178,6 +187,14 @@ class TestPublishApplication(TestCase):
 
         message = str(context.exception)
         self.assertIn("Invalid S3 URI", message)
+
+    def test_publish_raise_unsupported_resource_types_when_create_application(self):
+        self.serverlessrepo_mock.create_application.side_effect = self.unsupported_resource_types_exception
+        with self.assertRaises(UnsupportedResourceTypesError) as context:
+            publish_application(self.template)
+
+        message = str(context.exception)
+        self.assertIn("Template contains unsupported resource types: 'AWS::XXX::XXX'.", message)
 
     def test_publish_existing_application_should_update_application_if_version_not_specified(self):
         self.serverlessrepo_mock.create_application.side_effect = self.application_exists_error

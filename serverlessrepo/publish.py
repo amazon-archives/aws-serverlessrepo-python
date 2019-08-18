@@ -11,7 +11,12 @@ from .parser import (
     yaml_dump, parse_template, get_app_metadata,
     parse_application_id, strip_app_metadata
 )
-from .exceptions import ServerlessRepoClientError, S3PermissionsRequired, InvalidS3UriError
+from .exceptions import (
+    ServerlessRepoClientError,
+    S3PermissionsRequired,
+    InvalidS3UriError,
+    UnsupportedResourceTypesError
+)
 
 CREATE_APPLICATION = 'CREATE_APPLICATION'
 UPDATE_APPLICATION = 'UPDATE_APPLICATION'
@@ -220,12 +225,16 @@ def _wrap_client_error(e):
     message = e.response['Error']['Message']
 
     if error_code == 'BadRequestException':
-        if "Failed to copy S3 object. Access denied:" in message:
+        if 'Failed to copy S3 object. Access denied:' in message:
             match = re.search('bucket=(.+?), key=(.+?)$', message)
             if match:
                 return S3PermissionsRequired(bucket=match.group(1), key=match.group(2))
-        if "Invalid S3 URI" in message:
+        if 'Invalid S3 URI' in message:
             return InvalidS3UriError(message=message)
+        if 'The template contains unsupported resource types.' in message:
+            match = re.search(r'\[(.+?)\]$', message)
+            if match:
+                return UnsupportedResourceTypesError(resource_types=match.group(1))
 
     return ServerlessRepoClientError(message=message)
 
