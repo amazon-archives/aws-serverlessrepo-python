@@ -1,6 +1,5 @@
 """Helper to parse JSON/YAML SAM template and dump YAML files."""
 
-import re
 import copy
 import json
 from collections import OrderedDict
@@ -12,9 +11,8 @@ from yaml.resolver import ScalarNode, SequenceNode
 from .application_metadata import ApplicationMetadata
 from .exceptions import ApplicationMetadataNotFoundError
 
-METADATA = 'Metadata'
-SERVERLESS_REPO_APPLICATION = 'AWS::ServerlessRepo::Application'
-APPLICATION_ID_PATTERN = r'arn:[\w\-]+:serverlessrepo:[\w\-]+:[0-9]+:applications\/[\S]+'
+METADATA = "Metadata"
+SERVERLESS_REPO_APPLICATION = "AWS::ServerlessRepo::Application"
 
 
 def intrinsics_multi_constructor(loader, tag_prefix, node):
@@ -27,17 +25,17 @@ def intrinsics_multi_constructor(loader, tag_prefix, node):
     tag = node.tag[1:]
 
     # Some intrinsic functions doesn't support prefix "Fn::"
-    prefix = 'Fn::'
-    if tag in ['Ref', 'Condition']:
-        prefix = ''
+    prefix = "Fn::"
+    if tag in ["Ref", "Condition"]:
+        prefix = ""
 
     cfntag = prefix + tag
 
-    if tag == 'GetAtt' and isinstance(node.value, six.string_types):
+    if tag == "GetAtt" and isinstance(node.value, six.string_types):
         # ShortHand notation for !GetAtt accepts Resource.Attribute format
         # while the standard notation is to use an array
         # [Resource, Attribute]. Convert shorthand to standard format
-        value = node.value.split('.', 1)
+        value = node.value.split(".", 1)
 
     elif isinstance(node, ScalarNode):
         # Value of this node is scalar
@@ -90,8 +88,10 @@ def parse_template(template_str):
         # json parser.
         return json.loads(template_str, object_pairs_hook=OrderedDict)
     except ValueError:
-        yaml.SafeLoader.add_constructor(yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG, _dict_constructor)
-        yaml.SafeLoader.add_multi_constructor('!', intrinsics_multi_constructor)
+        yaml.SafeLoader.add_constructor(
+            yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG, _dict_constructor
+        )
+        yaml.SafeLoader.add_multi_constructor("!", intrinsics_multi_constructor)
         return yaml.safe_load(template_str)
 
 
@@ -110,20 +110,10 @@ def get_app_metadata(template_dict):
         return ApplicationMetadata(app_metadata_dict)
 
     raise ApplicationMetadataNotFoundError(
-        error_message='missing {} section in template Metadata'.format(SERVERLESS_REPO_APPLICATION))
-
-
-def parse_application_id(text):
-    """
-    Extract the application id from input text.
-
-    :param text: text to parse
-    :type text: str
-    :return: application id if found in the input
-    :rtype: str
-    """
-    result = re.search(APPLICATION_ID_PATTERN, text)
-    return result.group(0) if result else None
+        error_message="missing {} section in template Metadata".format(
+            SERVERLESS_REPO_APPLICATION
+        )
+    )
 
 
 def strip_app_metadata(template_dict):
@@ -141,7 +131,8 @@ def strip_app_metadata(template_dict):
     template_dict_copy = copy.deepcopy(template_dict)
 
     # strip the whole metadata section if SERVERLESS_REPO_APPLICATION is the only key in it
-    if not [k for k in template_dict_copy.get(METADATA) if k != SERVERLESS_REPO_APPLICATION]:
+    metadata = template_dict_copy.get(METADATA)
+    if not any(k for k in metadata if k != SERVERLESS_REPO_APPLICATION):
         template_dict_copy.pop(METADATA, None)
     else:
         template_dict_copy.get(METADATA).pop(SERVERLESS_REPO_APPLICATION, None)

@@ -4,7 +4,7 @@
 class ServerlessRepoError(Exception):
     """Base exception raised by serverlessrepo library."""
 
-    MESSAGE = ''
+    MESSAGE = ""
 
     def __init__(self, **kwargs):
         """Init the exception object."""
@@ -32,11 +32,13 @@ class InvalidApplicationPolicyError(ServerlessRepoError):
 class S3PermissionsRequired(ServerlessRepoError):
     """Raised when S3 bucket access is denied."""
 
-    MESSAGE = "The AWS Serverless Application Repository does not have read access to bucket '{bucket}', " \
-              "key '{key}'. Please update your Amazon S3 bucket policy to grant the service read " \
-              "permissions to the application artifacts you have uploaded to your S3 bucket. See " \
-              "https://docs.aws.amazon.com/serverlessrepo/latest/devguide/serverless-app-publishing-applications.html" \
-              " for more details."
+    MESSAGE = (
+        "The AWS Serverless Application Repository does not have read access to bucket '{bucket}', "
+        "key '{key}'. Please update your Amazon S3 bucket policy to grant the service read "
+        "permissions to the application artifacts you have uploaded to your S3 bucket. See "
+        "https://docs.aws.amazon.com/serverlessrepo/latest/devguide/serverless-app-publishing-applications.html"
+        " for more details."
+    )
 
 
 class InvalidS3UriError(ServerlessRepoError):
@@ -47,5 +49,11 @@ class InvalidS3UriError(ServerlessRepoError):
 
 class ServerlessRepoClientError(ServerlessRepoError):
     """Wrapper for botocore ClientError."""
+
+    MESSAGE = "{message}"
+
+
+class MultipleMatchingApplicationsError(ServerlessRepoError):
+    """Raised when multiple matching applications are found."""
 
     MESSAGE = "{message}"
