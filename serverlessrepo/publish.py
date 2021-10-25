@@ -280,9 +280,10 @@ def _get_application_id(sar_client, metadata):
     """
     application_ids = []
     pager = sar_client.get_paginator("list_applications")
-    for application in pager.paginate():
-        if application["Name"] == metadata.name:
-            application_ids.append(application["ApplicationId"])
+    for page in pager.paginate():
+        for application in page.get("Applications", []):
+            if application["Name"] == metadata.name:
+                application_ids.append(application["ApplicationId"])
     if len(application_ids) > 1:
         raise MultipleMatchingApplicationsError(
             message='Multiple applications with the name "%s"' % metadata.name
