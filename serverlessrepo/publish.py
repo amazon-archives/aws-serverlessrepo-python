@@ -7,15 +7,17 @@ import boto3
 from botocore.exceptions import ClientError
 
 from .application_metadata import ApplicationMetadata
-from .parser import (
-    yaml_dump, parse_template, get_app_metadata,
-    parse_application_id, strip_app_metadata
+from .parser import yaml_dump, parse_template, get_app_metadata, strip_app_metadata
+from .exceptions import (
+    MultipleMatchingApplicationsError,
+    ServerlessRepoClientError,
+    S3PermissionsRequired,
+    InvalidS3UriError,
 )
-from .exceptions import ServerlessRepoClientError, S3PermissionsRequired, InvalidS3UriError
 
-CREATE_APPLICATION = 'CREATE_APPLICATION'
-UPDATE_APPLICATION = 'UPDATE_APPLICATION'
-CREATE_APPLICATION_VERSION = 'CREATE_APPLICATION_VERSION'
+CREATE_APPLICATION = "CREATE_APPLICATION"
+UPDATE_APPLICATION = "UPDATE_APPLICATION"
+CREATE_APPLICATION_VERSION = "CREATE_APPLICATION_VERSION"
 
 
 def publish_application(template, sar_client=None):
@@ -31,10 +33,10 @@ def publish_application(template, sar_client=None):
     :raises ValueError
     """
     if not template:
-        raise ValueError('Require SAM template to publish the application')
+        raise ValueError("Require SAM template to publish the application")
 
     if not sar_client:
-        sar_client = boto3.client('serverlessrepo')
+        sar_client = boto3.client("serverlessrepo")
 
     template_dict = _get_template_dict(template)
     app_metadata = get_app_metadata(template_dict)
@@ -43,15 +45,14 @@ def publish_application(template, sar_client=None):
     try:
         request = _create_application_request(app_metadata, stripped_template)
         response = sar_client.create_application(**request)
-        application_id = response['ApplicationId']
+        application_id = response["ApplicationId"]
         actions = [CREATE_APPLICATION]
     except ClientError as e:
         if not _is_conflict_exception(e):
             raise _wrap_client_error(e)
 
         # Update the application if it already exists
-        error_message = e.response['Error']['Message']
-        application_id = parse_application_id(error_message)
+        application_id = _get_application_id(sar_client, app_metadata)
         try:
             request = _update_application_request(app_metadata, application_id)
             sar_client.update_application(**request)
@@ -62,7 +63,9 @@ def publish_application(template, sar_client=None):
         # Create application version if semantic version is specified
         if app_metadata.semantic_version:
             try:
-                request = _create_application_version_request(app_metadata, application_id, stripped_template)
+                request = _create_application_version_request(
+                    app_metadata, application_id, stripped_template
+                )
                 sar_client.create_application_version(**request)
                 actions.append(CREATE_APPLICATION_VERSION)
             except ClientError as e:
@@ -70,9 +73,9 @@ def publish_application(template, sar_client=None):
                     raise _wrap_client_error(e)
 
     return {
-        'application_id': application_id,
-        'actions': actions,
-        'details': _get_publish_details(actions, app_metadata.template_dict)
+        "application_id": application_id,
+        "actions": actions,
+        "details": _get_publish_details(actions, app_metadata.template_dict),
     }
 
 
@@ -89,10 +92,12 @@ def update_application_metadata(template, application_id, sar_client=None):
     :raises ValueError
     """
     if not template or not application_id:
-        raise ValueError('Require SAM template and application ID to update application metadata')
+        raise ValueError(
+            "Require SAM template and application ID to update application metadata"
+        )
 
     if not sar_client:
-        sar_client = boto3.client('serverlessrepo')
+        sar_client = boto3.client("serverlessrepo")
 
     template_dict = _get_template_dict(template)
     app_metadata = get_app_metadata(template_dict)
@@ -116,7 +121,7 @@ def _get_template_dict(template):
     if isinstance(template, dict):
         return copy.deepcopy(template)
 
-    raise ValueError('Input template should be a string or dictionary')
+    raise ValueError("Input template should be a string or dictionary")
 
 
 def _create_application_request(app_metadata, template):
@@ -130,21 +135,21 @@ def _create_application_request(app_metadata, template):
     :return: SAR CreateApplication request body
     :rtype: dict
     """
-    app_metadata.validate(['author', 'description', 'name'])
+    app_metadata.validate(["author", "description", "name"])
     request = {
-        'Author': app_metadata.author,
-        'Description': app_metadata.description,
-        'HomePageUrl': app_metadata.home_page_url,
-        'Labels': app_metadata.labels,
-        'LicenseBody': app_metadata.license_body,
-        'LicenseUrl': app_metadata.license_url,
-        'Name': app_metadata.name,
-        'ReadmeBody': app_metadata.readme_body,
-        'ReadmeUrl': app_metadata.readme_url,
-        'SemanticVersion': app_metadata.semantic_version,
-        'SourceCodeUrl': app_metadata.source_code_url,
-        'SpdxLicenseId': app_metadata.spdx_license_id,
-        'TemplateBody': template
+        "Author": app_metadata.author,
+        "Description": app_metadata.description,
+        "HomePageUrl": app_metadata.home_page_url,
+        "Labels": app_metadata.labels,
+        "LicenseBody": app_metadata.license_body,
+        "LicenseUrl": app_metadata.license_url,
+        "Name": app_metadata.name,
+        "ReadmeBody": app_metadata.readme_body,
+        "ReadmeUrl": app_metadata.readme_url,
+        "SemanticVersion": app_metadata.semantic_version,
+        "SourceCodeUrl": app_metadata.source_code_url,
+        "SpdxLicenseId": app_metadata.spdx_license_id,
+        "TemplateBody": template,
     }
     # Remove None values
     return {k: v for k, v in request.items() if v}
@@ -162,13 +167,13 @@ def _update_application_request(app_metadata, application_id):
     :rtype: dict
     """
     request = {
-        'ApplicationId': application_id,
-        'Author': app_metadata.author,
-        'Description': app_metadata.description,
-        'HomePageUrl': app_metadata.home_page_url,
-        'Labels': app_metadata.labels,
-        'ReadmeBody': app_metadata.readme_body,
-        'ReadmeUrl': app_metadata.readme_url
+        "ApplicationId": application_id,
+        "Author": app_metadata.author,
+        "Description": app_metadata.description,
+        "HomePageUrl": app_metadata.home_page_url,
+        "Labels": app_metadata.labels,
+        "ReadmeBody": app_metadata.readme_body,
+        "ReadmeUrl": app_metadata.readme_url,
     }
     return {k: v for k, v in request.items() if v}
 
@@ -186,12 +191,12 @@ def _create_application_version_request(app_metadata, application_id, template):
     :return: SAR CreateApplicationVersion request body
     :rtype: dict
     """
-    app_metadata.validate(['semantic_version'])
+    app_metadata.validate(["semantic_version"])
     request = {
-        'ApplicationId': application_id,
-        'SemanticVersion': app_metadata.semantic_version,
-        'SourceCodeUrl': app_metadata.source_code_url,
-        'TemplateBody': template
+        "ApplicationId": application_id,
+        "SemanticVersion": app_metadata.semantic_version,
+        "SourceCodeUrl": app_metadata.source_code_url,
+        "TemplateBody": template,
     }
     return {k: v for k, v in request.items() if v}
 
@@ -204,8 +209,8 @@ def _is_conflict_exception(e):
     :type e: ClientError
     :return: True if e is ConflictException
     """
-    error_code = e.response['Error']['Code']
-    return error_code == 'ConflictException'
+    error_code = e.response["Error"]["Code"]
+    return error_code == "ConflictException"
 
 
 def _wrap_client_error(e):
@@ -216,12 +221,12 @@ def _wrap_client_error(e):
     :type e: ClientError
     :return: S3PermissionsRequired or InvalidS3UriError or general ServerlessRepoClientError
     """
-    error_code = e.response['Error']['Code']
-    message = e.response['Error']['Message']
+    error_code = e.response["Error"]["Code"]
+    message = e.response["Error"]["Message"]
 
-    if error_code == 'BadRequestException':
+    if error_code == "BadRequestException":
         if "Failed to copy S3 object. Access denied:" in message:
-            match = re.search('bucket=(.+?), key=(.+?)$', message)
+            match = re.search("bucket=(.+?), key=(.+?)$", message)
             if match:
                 return S3PermissionsRequired(bucket=match.group(1), key=match.group(2))
         if "Invalid S3 URI" in message:
@@ -250,11 +255,37 @@ def _get_publish_details(actions, app_metadata_template):
         ApplicationMetadata.HOME_PAGE_URL,
         ApplicationMetadata.LABELS,
         ApplicationMetadata.README_URL,
-        ApplicationMetadata.README_BODY
+        ApplicationMetadata.README_BODY,
     ]
 
     if CREATE_APPLICATION_VERSION in actions:
         # SemanticVersion and SourceCodeUrl can only be updated by creating a new version
-        additional_keys = [ApplicationMetadata.SEMANTIC_VERSION, ApplicationMetadata.SOURCE_CODE_URL]
+        additional_keys = [
+            ApplicationMetadata.SEMANTIC_VERSION,
+            ApplicationMetadata.SOURCE_CODE_URL,
+        ]
         include_keys.extend(additional_keys)
     return {k: v for k, v in app_metadata_template.items() if k in include_keys and v}
+
+
+def _get_application_id(sar_client, metadata):
+    """
+    Gets the application ID of rhte matching application name.
+
+    :param sar_client: The boto3 SAR client.
+    :param metadata: The application meta data.
+    :return: The matching application ID.
+    :rtype: str
+    :raises: MultipleMatchingApplicationsError
+    """
+    application_ids = []
+    pager = sar_client.get_paginator("list_applications")
+    for page in pager.paginate():
+        for application in page.get("Applications", []):
+            if application["Name"] == metadata.name:
+                application_ids.append(application["ApplicationId"])
+    if len(application_ids) > 1:
+        raise MultipleMatchingApplicationsError(
+            message='Multiple applications with the name "%s"' % metadata.name
+        )
+    return application_ids[0] if len(application_ids) == 1 else None
